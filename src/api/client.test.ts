@@ -213,3 +213,133 @@ describe('apiGet — 特殊レスポンス (T7)', () => {
     await assertion;
   });
 });
+
+describe('apiGet — タイムアウトでフォールバック (A)', () => {
+  it('1st ミラーがタイムアウト（AbortController 発火）すると、2nd ミラーへフォールバックする', async () => {
+    vi.useFakeTimers();
+    const path = uniquePath('timeout_fallback');
+
+    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url.startsWith(MIRRORS[0])) {
+        // 1st ミラーは応答せず放置する。fetchWithTimeout の AbortController が発火した
+        // ときだけ reject する（実 fetch の abort 挙動を模す）。timer で abort されなければ
+        // この Promise は永遠に解決しない。
+        return new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          });
+        });
+      }
+      return Promise.resolve(jsonResponse(200, { url }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promise = apiGet<{ url: string }>(path);
+    // FETCH_TIMEOUT_MS(5000ms) 経過で AbortController.abort() が呼ばれるはず
+    await vi.advanceTimersByTimeAsync(5000);
+    const result = await promise;
+
+    expect(result.url).toBe(`${MIRRORS[1]}/${path}`);
+    const [firstCallUrl, firstCallInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(firstCallUrl).toBe(`${MIRRORS[0]}/${path}`);
+    expect(firstCallInit.signal?.aborted).toBe(true);
+  });
+});
+
+describe('result_key の再取得先ミラー (D)', () => {
+  it('元リクエストが1stミラー失敗・2ndミラーで成功した場合、result_key の再取得も2ndミラーへ行く（MIRRORS[0] 固定にならない）', async () => {
+    vi.useFakeTimers();
+    const path = uniquePath('result_key_mirror');
+    const expectedResultUrl = `${MIRRORS[1]}/api/v2/pl4/result/xyz789`;
+    const wrongResultUrl = `${MIRRORS[0]}/api/v2/pl4/result/xyz789`;
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === `${MIRRORS[0]}/${path}`) {
+        return Promise.reject(new Error('mirror0 down'));
+      }
+      if (url === `${MIRRORS[1]}/${path}`) {
+        return Promise.resolve(jsonResponse(200, { result_key: 'xyz789' }));
+      }
+      if (url === expectedResultUrl) {
+        return Promise.resolve(jsonResponse(200, { value: 'done-via-mirror1' }));
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promise = apiGet<{ value: string }>(path);
+    await vi.advanceTimersByTimeAsync(1000);
+    const result = await promise;
+
+    expect(result).toEqual({ value: 'done-via-mirror1' });
+    const calls = fetchMock.mock.calls as [string][];
+    const resultCall = calls.find(([url]) => url === expectedResultUrl);
+    expect(resultCall).toBeDefined();
+    // MIRRORS[0] 固定ではないことを完全一致で確認する（ミューテーションでミラーを固定すると落ちる。設計書 §2.1 D）
+    expect(calls.some(([url]) => url === wrongResultUrl)).toBe(false);
+  });
+});
+
+describe('apiGet — 失敗した Promise はキャッシュされない (F)', () => {
+  it('全ミラー失敗後、同じ path へ再度 apiGet すると再度 fetch される', async () => {
+    const path = uniquePath('fail_then_retry');
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiGet(path)).rejects.toBeInstanceOf(ApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(MIRRORS.length);
+
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue(jsonResponse(200, { value: 'ok' }));
+
+    const result = await apiGet<{ value: string }>(path);
+    expect(result).toEqual({ value: 'ok' });
+    // 失敗した Promise がキャッシュに残っていれば再 fetch は発生しないはず → 実際には発生する
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('apiGet — キャッシュ上限到達で全クリアされる (G)', () => {
+  it('MAX_CACHE_ENTRIES(500) に達すると、それ以前にキャッシュされていたエントリも巻き込んで全クリアされる', async () => {
+    // MAX_CACHE_ENTRIES はテストの都合で注入可能にする production 変更をしない
+    // （設計書 §2.1 G）。そのため 500 件そのまま積む形になるが、fetch はモックで即時解決
+    // するため実行コストは小さい。この 500 という数値は client.ts の実装定数と結合しており、
+    // 実装側で MAX_CACHE_ENTRIES を変えたらこのテストの件数（499）も合わせて更新すること。
+    //
+    // このファイルの他のテストは client.ts のモジュール共有キャッシュに既にいくつかエントリを
+    // 積んでいる（uniquePath で衝突は避けているが、Map 自体はテスト間で共有され続ける）。
+    // 500件ちょうどの境界を検証するには、その残存分の影響を受けない「まっさらなキャッシュ」
+    // が必要なので、vi.resetModules() で client.ts を再読み込みしてから使う
+    // （トップレベルで static import 済みの apiGet はこの後も既存モジュールのままなので、
+    // 他のテストには影響しない）。
+    vi.resetModules();
+    const freshClient = await import('./client');
+    const freshApiGet = freshClient.apiGet;
+
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { value: 'first-gen' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstPath = uniquePath('overflow_first');
+    await freshApiGet(firstPath);
+
+    const otherPaths: string[] = [];
+    for (let i = 0; i < 499; i++) {
+      otherPaths.push(uniquePath(`overflow_fill_${i}`));
+    }
+    await Promise.all(otherPaths.map((p) => freshApiGet(p)));
+
+    // ここでキャッシュはちょうど500件（firstPath 含む）。firstPath は依然キャッシュヒットする
+    fetchMock.mockClear();
+    await freshApiGet(firstPath);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // 501件目の新規 path を積むと、上限到達により全クリアされる
+    const overflowPath = uniquePath('overflow_trigger');
+    await freshApiGet(overflowPath);
+
+    // 全クリアされた結果、firstPath は再び fetch される
+    fetchMock.mockClear();
+    await freshApiGet(firstPath);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

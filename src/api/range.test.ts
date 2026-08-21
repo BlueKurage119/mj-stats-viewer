@@ -93,3 +93,32 @@ describe('setRangeResolver', () => {
     expect(result).toEqual({ start: new Date(0), end: new Date(1) });
   });
 });
+
+describe('resolveRange — PRESET_DAYS (H)', () => {
+  it('"30d" は end - 30日 が start になる', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T12:34:56Z'));
+
+    const { start, end } = await resolveRange({ kind: 'preset', preset: '30d' }, 4, 123456789);
+
+    expect(end.getTime() - start.getTime()).toBe(30 * 24 * 3_600_000);
+  });
+
+  it('"90d" は end - 90日 が start になる', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T12:34:56Z'));
+
+    const { start, end } = await resolveRange({ kind: 'preset', preset: '90d' }, 4, 123456789);
+
+    expect(end.getTime() - start.getTime()).toBe(90 * 24 * 3_600_000);
+  });
+
+  it('"1y" は end - 365日 が start になる', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T12:34:56Z'));
+
+    const { start, end } = await resolveRange({ kind: 'preset', preset: '1y' }, 4, 123456789);
+
+    expect(end.getTime() - start.getTime()).toBe(365 * 24 * 3_600_000);
+  });
+});
