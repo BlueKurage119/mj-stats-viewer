@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getPlayerStats, getGlobalStatistics, getCurrentLevel } from './endpoints';
 import { setSelectedMirrorIndex } from './mirrors';
-import { FakeStorage, jsonResponse, loadFixture } from './testFixtures';
+import { FakeStorage, jsonResponse } from './testFixtures';
 import type { RawGlobalStatistics, RawPlayerStats } from './types';
+import playerStatsFixture from './testdata/player_stats.json';
+import globalStatistics2Fixture from './testdata/global_statistics_2.json';
+
+const playerStatsRaw = playerStatsFixture as unknown as RawPlayerStats;
+const globalStatistics2Raw = globalStatistics2Fixture as unknown as RawGlobalStatistics;
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', new FakeStorage());
@@ -18,11 +23,23 @@ afterEach(() => {
 
 describe('getPlayerStats — mode 省略時の URL (T9)', () => {
   it('modes 省略時、URL に全モードを明示列挙する（空 mode を送らない）', async () => {
-    const raw = loadFixture<RawPlayerStats>('player_stats.json');
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, raw));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, playerStatsRaw));
     vi.stubGlobal('fetch', fetchMock);
 
     await getPlayerStats(4, 123456789, new Date(0), new Date(1000), undefined);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain('mode=16.12.9.15.11.8');
+    expect(url).not.toContain('mode=&');
+    expect(url).not.toMatch(/mode=$/);
+  });
+
+  it('modes に空配列を渡した場合も全モードを明示列挙する（設計書 §6.1: 省略時・空配列時）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, playerStatsRaw));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getPlayerStats(4, 123456789, new Date(0), new Date(2000), []);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url] = fetchMock.mock.calls[0] as [string];
@@ -34,8 +51,7 @@ describe('getPlayerStats — mode 省略時の URL (T9)', () => {
 
 describe('getGlobalStatistics — mode キーの剥がし (T10)', () => {
   it('ワイヤの mode 文字列キー1段を剥がして levelId キーだけの GlobalStatistics を返す', async () => {
-    const raw = loadFixture<RawGlobalStatistics>('global_statistics_2.json');
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, raw));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, globalStatistics2Raw));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await getGlobalStatistics(4, [16]);
@@ -45,8 +61,8 @@ describe('getGlobalStatistics — mode キーの剥がし (T10)', () => {
 
     // ワイヤはトップキー "16" の下に levelId が並ぶが、公開型はその段を剥がしてある
     expect(Object.keys(result).sort()).toEqual(['10301', '10503']);
-    expect(result['10301'].basic.gameCount).toBe(raw['16']['10301'].basic.count);
-    expect(result['10301'].extended.roundCount).toBe(raw['16']['10301'].extended.count);
+    expect(result['10301'].basic.gameCount).toBe(globalStatistics2Raw['16']['10301'].basic.count);
+    expect(result['10301'].extended.roundCount).toBe(globalStatistics2Raw['16']['10301'].extended.count);
     // 10503 段位帯は回数系6キーが欠落しており 0 補完される
     expect(result['10503'].extended.最大连庄).toBe(0);
   });
@@ -54,14 +70,13 @@ describe('getGlobalStatistics — mode キーの剥がし (T10)', () => {
 
 describe('getCurrentLevel (T12)', () => {
   it('全期間・全モードの URL を叩き、getPlayerStats とキャッシュを共有する', async () => {
-    const raw = loadFixture<RawPlayerStats>('player_stats.json');
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, raw));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, playerStatsRaw));
     vi.stubGlobal('fetch', fetchMock);
 
     const info = await getCurrentLevel(4, 123456789);
     expect(info).not.toBeNull();
-    expect(info?.level).toEqual(raw.level);
-    expect(info?.nickname).toBe(raw.nickname);
+    expect(info?.level).toEqual(playerStatsRaw.level);
+    expect(info?.nickname).toBe(playerStatsRaw.nickname);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url] = fetchMock.mock.calls[0] as [string];

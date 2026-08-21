@@ -436,13 +436,15 @@ export function setRangeResolver(resolver: RangeResolver): void;
 
 - devDependencies に **`vitest`（^4.1.11）のみ**追加。jsdom / happy-dom / testing-library は**入れない**（API層・Issue 4 とも純ロジック。DOM 不要。環境は既定の node）
 - `package.json` に `"test": "vitest run"` を追加。設定ファイルは作らない（vitest は `*.test.ts` を規約で発見する。必要になったら `vite.config.ts` に `test` ブロックを足す — その際は `/// <reference types="vitest/config" />` を使う）
-- `tsconfig.app.json` は変更不要（`*.test.ts` が `include: ["src"]` に入り `tsc -b` で型検査される。`vitest/globals` は使わず **`import { describe, it, expect, vi } from 'vitest'` を明示**する — globals 注入は tsconfig 変更が必要になるため不採用）
+- `tsconfig.app.json` は `*.test.ts` を `include: ["src"]` に含める点では変更不要（`tsc -b` で型検査される）。`vitest/globals` は使わず **`import { describe, it, expect, vi } from 'vitest'` を明示**する — globals 注入は tsconfig 変更が必要になるため不採用
+- **`resolveJsonModule: true` のみ追加**（フィクスチャ JSON を直接 import するため。§7.3 参照）。`/// <reference types="node" />` 等で node のアンビエント型をプログラム全体に漏らす手段は**採用しない**（tsconfig の `"types"` を実質的に無効化してしまい、ブラウザ用コードが `process` 等を型エラーなしで参照できてしまう。検収の実証で判明した回帰）
 - localStorage は §5.1 のとおり try/catch ガード済みなので node 環境で問題にならない。`fetch` / `AbortController` は Node 20+ にネイティブ存在し、テストでは `vi.stubGlobal('fetch', mock)` で差し替える
 
 ### 7.3 フィクスチャ
 
 - §1 で保存した実レスポンス JSON を**匿名化して** `src/api/testdata/` にコミットする: `id` → `123456789`、`nickname` → `"テストプレイヤー"`、`最近大铳.id`（牌譜ID）→ ダミー文字列。それ以外の数値は実データのまま（型検証の根拠として価値があるため）
 - 対象: `player_stats.json` / `player_extended_stats.json`（回数系4キー欠落の実物）/ `search_player.json` / `level_statistics.json`。histogram / global_statistics_2 は巨大なため**縮約版**（mode 1個 × band 2個 / level 2個に間引き。構造は実物どおり）を手で起こす
+- **読み込み方式: ES import（`resolveJsonModule`）を使う。** テストファイルから `import raw from './testdata/xxx.json'` の形で直接 import し、`as unknown as Raw*` で型付けする。`node:fs` 等 node 組み込みモジュールには依存しない — `tsconfig.app.json` に `types` の `"node"` 追加や `/// <reference types="node" />` を必要とする実装は**採用しない**（ブラウザ向けアプリコード全体に `process` 等のアンビエント型が漏れ、`CLAUDE.md` が警告する「エラーも警告も出ずに壊れる」類のリスクになるため）
 
 ### 7.4 必須テストケース（受け入れ条件と対応）
 

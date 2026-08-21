@@ -1,22 +1,11 @@
 /**
- * テスト専用フィクスチャ読み込みヘルパー。
- * resolveJsonModule を有効化せずに済むよう、ES import ではなく fs 経由で読む。
+ * テスト専用ヘルパー（localStorage モック・fetch レスポンスモック）。
  * バレル（index.ts）からは公開しない。
  *
- * tsconfig.app.json の "types" は ["vite/client"] のみに絞られており node の
- * アンビエント型を含まないため、このファイルに限定して参照する（tsconfig 自体は変更しない）。
+ * フィクスチャ本体（testdata/*.json）は各テストファイルから
+ * `import raw from './testdata/xxx.json'` の形で直接 import する
+ * （tsconfig.app.json の resolveJsonModule を使用。node 依存は無い）。
  */
-/// <reference types="node" />
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-
-const testdataDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'testdata');
-
-export function loadFixture<T>(name: string): T {
-  const raw = readFileSync(path.join(testdataDir, name), 'utf-8');
-  return JSON.parse(raw) as T;
-}
 
 /** localStorage の最小モック（Node 実行環境には global localStorage が無いため） */
 export class FakeStorage {

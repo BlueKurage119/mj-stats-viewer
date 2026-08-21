@@ -48,9 +48,11 @@ function resolvePreset(preset: PeriodPreset): ResolvedRange {
   return { start, end };
 }
 
-/** preset のみ解決する既定実装。lastNGames は RangeNotSupportedError を throw する */
+/**
+ * preset のみ解決する既定実装。lastNGames は RangeNotSupportedError を throw する。
+ * throw を（同期例外ではなく）Promise rejection にするため resolve は async のまま維持する。
+ */
 export const defaultRangeResolver: RangeResolver = {
-  // eslint-disable-next-line @typescript-eslint/require-await -- throw を Promise rejection にするため async を維持する
   async resolve(spec, _numPlayers, _playerId) {
     if (spec.kind === 'lastNGames') {
       throw new RangeNotSupportedError(
