@@ -8,6 +8,6 @@ export const IconButton = createComponent({
   react: React,
   events: {
     onChange: 'change' as EventName<Event & { currentTarget: MdIconButton }>,
-    onInput: 'input' as EventName<Event & { currentTarget: MdIconButton }>,
+    onInput: 'input' as EventName<InputEvent & { currentTarget: MdIconButton }>,
   },
 });

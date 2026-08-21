@@ -89,6 +89,7 @@ createComponent<I extends HTMLElement, E extends EventNames = {}>(options: {
 1. `src/` 配下で「**副作用のためだけの bare import**」（`import './foo'` 形式。CSS を除く）を書いてはならない。本番ビルドで黙って除去される。カスタム要素の登録は必ず「ラッパーの export を使う」ことで成立させる
 2. アプリコードは **必ずバレル `src/components/md`（index.ts）から import** する。個別ファイル直 import も動作はするが、規約はバレル一本に統一する（D=C の実測により性能差はゼロ）
 3. dev サーバーはツリーシェイクしないため、dev では `#/__components` 以外の画面でも29点全てが register される。これは仕様（本番には影響しない）
+4. **`sideEffects` が除去できるのは「モジュール丸ごと未使用」の場合のみ**であり、**使用中のファイル内で未使用の named export（同居する兄弟コンポーネント）** は除去されない。Rollup は `createComponent(...)` 呼び出しを純粋と証明できないため、同一ファイル内の未使用 export の呼び出し自体（＝そのラッパーが内部で持つスタイルトークン文字列等）が gzip 数百バイト単位で残存する（`customElements.define` 自体は当該 `@material/web` モジュールが他から参照されなければ除去されるため、実行時の副作用は残らない）。実測: `Button.ts`（FilledButton/FilledTonalButton/TextButton 同居）から `FilledButton` 1点だけ使う場合、`FilledButton` 単独ファイルから import した場合（gzip 88.49 kB）より数百バイト大きい（gzip 89.26 kB）。§5 のファイル分割単位（ディレクトリ単位で複数コンポーネントを同居させる）を採る限りこの差は残り、後続 Issue でバンドルサイズが想定と数百バイト単位でズレても異常ではない
 
 ---
 
@@ -320,11 +321,11 @@ ThemeProvider 配下で描画される（7.1 の構造上自動的に被る）�
 2. **Tabs デモ（完了条件3の検証区画)**: `<Tabs onChange={…}>` に PrimaryTab を3枚（例: 順位分布/総合成績/立直統計）。`useState` で受けた `e.currentTarget.activeTabIndex` を **`選択中: N`** とタブの下にテキスト表示する。クリックで N が変わることが「change イベントを React ハンドラで受け取れた」ことの目視証拠
 3. **ボタン**: FilledButton / FilledTonalButton / TextButton / IconButton（toggle 指定で onChange の発火回数を並記）
 4. **アイコン**: `<Icon>home</Icon>` `<Icon>search</Icon>` `<Icon>trending_up</Icon>` 等5個程度 ＋ 「この行が文字列に見えたらフォント未読込」の注記（受け入れ条件7の目視点）
-5. **ナビ**: NavigationBar ＋ NavigationTab 3枚（label と Icon スロット）。`onNavigationBarActivated` で activeIndex を表示。うち1枚に Badge（`value="3"`）を載せる
+5. **ナビ**: NavigationBar ＋ NavigationTab 3枚（label と Icon スロット）。`onNavigationBarActivated` で activeIndex を表示。うち1枚は `showBadge` / `badgeValue="3"` プロパティでバッジを表示する（`md-navigation-tab` のスロットは `active-icon` / `inactive-icon` の2つのみでデフォルトスロットが無いため——`navigationtab/internal/navigation-tab.js` の `<slot>` で確認済み——、Badge を子要素として置いても light DOM に取り残されて描画されない。`showBadge`/`badgeValue` は内部で `<md-badge>` を自前描画する正規 API であり、これを使う）。Badge 単体の描画確認は別途 `position: relative` な枠内に単独配置して行う（`md-badge` は shadow 内で `position: absolute` を使うため relative な親が必須。10. 素材系の Elevation デモと同じ作法）
 6. **選択系**: ChipSet＋FilterChip 3枚（onClick で selected 読み取り表示、onRemove 動作確認用に removable 1枚）、OutlinedSegmentedButtonSet＋OutlinedSegmentedButton 3枚（onSegmentedButtonSetSelection で index 表示）
 7. **カード**: ElevatedCard / FilledCard / OutlinedCard を横並び（中に List＋ListItem を入れ、要件 §4.3 の「ラベル＋値＋サブテキスト」形式のサンプル: 例 ツモ率 36.54% / supporting-text「和了回数比」）
 8. **進行**: LinearProgress（determinate `value=0.6` と `indeterminate`）、CircularProgress（同2種）
-9. **入力**: OutlinedTextField（label・onInput で値エコー）、OutlinedSelect＋SelectOption 3個（onChange で value 表示）、Menu＋MenuItem（anchor ボタンで open、onCloseMenu で選択結果表示。`md-menu` は `anchor` プロパティに要素 id を渡す方式で開く）
+9. **入力**: OutlinedTextField（label・onInput で値エコー）、OutlinedSelect＋SelectOption 3個（onChange で value 表示）、Menu＋MenuItem（`md-menu` は `anchor` プロパティに要素 id を渡す方式で anchor ボタンとの位置合わせを行うが、**anchor のクリックだけでは開かない**。開閉は `open` プロパティを React state で制御し、anchor ボタンの `onClick` で `open` を切り替え、`Menu` の `onClosed` で state を追従させる。onCloseMenu で選択結果表示。加えて `md-menu` の既定 `positioning="absolute"` は anchor と共通の `position: relative` な祖先を要求するため、anchor と Menu を包む div に `position: relative` を付ける）
 10. **素材系**: Divider、`position:relative` の枠に Elevation（`--md-elevation-level: 2`）、Ripple（`for` 無しで親要素に反応）を敷いたデモ
 
 これで29点全てがいずれかのセクションで実 DOM に描画される。

@@ -172,13 +172,26 @@ function NavDemo(): ReactElement {
           <Icon slot="active-icon">search</Icon>
           <Icon slot="inactive-icon">search</Icon>
         </NavigationTab>
-        <NavigationTab label="通知">
-          <Badge value="3" />
+        {/*
+          md-navigation-tab のスロットは active-icon / inactive-icon の2つのみで
+          デフォルトスロットが無い（navigation-tab.js の <slot> を確認済み）。
+          バッジは子要素として置くのではなく showBadge/badgeValue プロパティで
+          内部描画させる（NavigationTab.d.ts: showBadge時に内部で md-badge を描画）。
+        */}
+        <NavigationTab label="通知" showBadge badgeValue="3">
           <Icon slot="active-icon">trending_up</Icon>
           <Icon slot="inactive-icon">trending_up</Icon>
         </NavigationTab>
       </NavigationBar>
       <p className="md-typescale-body-medium">activeIndex: {activeIndex}</p>
+
+      {/*
+        Badge 単体の描画確認区画。md-badge は shadow 内で position: absolute を使うため、
+        position: relative な親の中に置く（10. 素材系の Elevation と同じ作法）。
+      */}
+      <div style={{ position: 'relative', width: 32, height: 32, marginTop: '0.5rem' }}>
+        <Badge value="9" />
+      </div>
     </div>
   );
 }
@@ -262,6 +275,7 @@ function ProgressDemo(): ReactElement {
 function InputsDemo(): ReactElement {
   const [text, setText] = useState('');
   const [selectValue, setSelectValue] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [menuResult, setMenuResult] = useState('-');
 
   return (
@@ -288,11 +302,27 @@ function InputsDemo(): ReactElement {
       </OutlinedSelect>
       <p className="md-typescale-body-small numeric">選択値: {selectValue}</p>
 
-      <div>
-        <FilledButton id="menu-anchor">メニューを開く</FilledButton>
+      <div style={{ position: 'relative' }}>
+        <FilledButton id="menu-anchor" onClick={() => setMenuOpen((open) => !open)}>
+          メニューを開く
+        </FilledButton>
+        {/*
+          md-menu は anchor プロパティを位置合わせにのみ使い、クリックでは自動的に開かない。
+          open を React state で制御する。close-menu（項目選択による確定的な閉じる合図）と
+          closed（アニメーション完了後。外側クリック等 close-menu を経ない閉じ方も含む）の
+          両方で state を追従させる。close-menu 側でも閉じておくことで、クローズアニメーションの
+          完了を待たずに（環境によっては動かないタブでアニメーションが完了しないこともあるため）
+          確定的に閉じられる。positioning は既定の absolute のままで良いが、anchor と共通の
+          position: relative な祖先が要る（設計書 §7.2 の修正どおり、この div がそれを兼ねる）。
+        */}
         <Menu
           anchor="menu-anchor"
-          onCloseMenu={(e) => setMenuResult(e.detail.itemPath[0]?.textContent?.trim() ?? '-')}
+          open={menuOpen}
+          onClosed={() => setMenuOpen(false)}
+          onCloseMenu={(e) => {
+            setMenuResult(e.detail.itemPath[0]?.textContent?.trim() ?? '-');
+            setMenuOpen(false);
+          }}
         >
           <MenuItem>
             <div slot="headline">上位</div>
