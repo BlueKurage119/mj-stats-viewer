@@ -5,6 +5,38 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mj-stats-viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // ThemeProvider (src/theme/ThemeProvider.tsx) と同じ解決規則の先行ミニ実装。
+      // localStorage キー名は必ず一致させること。
+      try {
+        var m = localStorage.getItem('mjsv:color-mode');
+        var dark = m === 'dark' || (m !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      } catch (e) {
+        /* system既定のまま */
+      }
+    </script>
+    <style>
+      /*
+       * トークン適用前（ランタイムJS評価前）の一瞬の地色。
+       * 既定シード（src/theme/seeds.ts の DEFAULT_SEED = #1D6B4F）の
+       * neutral トーン N98(light) / N6(dark) の実値を意図的に複製したもの。
+       * DEFAULT_SEED を変更してもここは自動追従しない（FOUC対策の固定値のため）。
+       */
+      html {
+        background-color: #f8faf6;
+      }
+      html[style*='color-scheme: dark'],
+      html[style*='color-scheme:dark'] {
+        background-color: #111412;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
