@@ -91,6 +91,57 @@ describe('apiGet — ミラーフォールバック (T4 / T5)', () => {
     await expect(apiGet(path)).rejects.toMatchObject({ status: 0 });
     expect(fetchMock).toHaveBeenCalledTimes(MIRRORS.length);
   });
+
+  it('同時に異なる path がフォールバックしても、後発のリクエストが唯一生きているミラーを飛ばさない', async () => {
+    // 再現シナリオ（指摘2）: A・B が同時にミラー0で失敗 → A がミラー1で成功し
+    // selectedMirrorIndex を書き換える → B がループ内で可変グローバルを読み直す実装だと
+    // ミラー1を飛ばして 2→3→0 を試し「全ミラー失敗」と誤報告する。
+    // 各リクエストは呼び出し開始時点の起点インデックスを1回だけスナップショットし、
+    // 以降はそれを使って全ミラーをちょうど1周するべき。
+    vi.useFakeTimers();
+    const pathA = uniquePath('race_a');
+    const pathB = uniquePath('race_b');
+    let pathBMirror0Calls = 0;
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === `${MIRRORS[0]}/${pathA}`) {
+        // A の1stミラーは即座に失敗する
+        return Promise.reject(new Error('mirror0 down (A)'));
+      }
+      if (url === `${MIRRORS[0]}/${pathB}`) {
+        pathBMirror0Calls += 1;
+        if (pathBMirror0Calls === 1) {
+          // B の1stミラー失敗は、A がミラー1で成功して selectedMirrorIndex を
+          // 書き換え終えた「あと」に確定させる（10ms 遅延）
+          return new Promise<Response>((_, reject) => {
+            setTimeout(() => reject(new Error('mirror0 down (B)')), 10);
+          });
+        }
+        // バグ挙動で mirror0 に再度たどり着いた場合はテストがハングしないよう即失敗させる
+        return Promise.reject(new Error(`mirror0 down (B) retry #${pathBMirror0Calls}`));
+      }
+      if (url === `${MIRRORS[1]}/${pathA}` || url === `${MIRRORS[1]}/${pathB}`) {
+        return Promise.resolve(jsonResponse(200, { url }));
+      }
+      // ミラー2・3 は用意していない（正しい実装なら到達しないはず）
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promiseA = apiGet<{ url: string }>(pathA);
+    const promiseB = apiGet<{ url: string }>(pathB);
+
+    // A は fake timer に依存せず即座に解決する（ミラー1が即成功するため）
+    const resultA = await promiseA;
+    expect(resultA.url).toBe(`${MIRRORS[1]}/${pathA}`);
+    expect(fakeStorage.getItem('mjsv:api-mirror')).toBe(MIRRORS[1]);
+
+    // ここで B の1stミラー失敗を確定させる（A の更新は既に完了済み）
+    await vi.advanceTimersByTimeAsync(10);
+
+    const resultB = await promiseB;
+    expect(resultB.url).toBe(`${MIRRORS[1]}/${pathB}`);
+  });
 });
 
 describe('apiGet — 404 の扱い (T6)', () => {
@@ -122,11 +173,14 @@ describe('apiGet — 特殊レスポンス (T7)', () => {
     await expect(apiGet(path)).rejects.toBeInstanceOf(MaintenanceError);
   });
 
-  it('{result_key} は1秒待機後に result/{key} を再取得し最終値を返す', async () => {
+  it('{result_key} は1秒待機後に result/{key} を再取得し最終値を返す（URL は元リクエストと同じ mirror/apiPrefix を維持する）', async () => {
     vi.useFakeTimers();
     const path = uniquePath('result_key');
+    // path は api/v2/pl4/__test_result_key_N の形。result 再取得は同じ mirror・同じ
+    // api プレフィックス（api/v2/pl4）を保った完全一致 URL でなければならない（指摘1）。
+    const expectedResultUrl = `${MIRRORS[0]}/api/v2/pl4/result/abc123`;
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/result/abc123')) {
+      if (url === expectedResultUrl) {
         return Promise.resolve(jsonResponse(200, { value: 'done' }));
       }
       return Promise.resolve(jsonResponse(200, { result_key: 'abc123' }));
@@ -139,7 +193,8 @@ describe('apiGet — 特殊レスポンス (T7)', () => {
 
     expect(result).toEqual({ value: 'done' });
     const calls = fetchMock.mock.calls as [string, RequestInit | undefined][];
-    const resultCall = calls.find(([url]) => url.includes('/result/abc123'));
+    // 部分一致ではなく、mirror・apiPrefix を含む URL 全体の完全一致を検証する
+    const resultCall = calls.find(([url]) => url === expectedResultUrl);
     expect(resultCall).toBeDefined();
     const [, resultInit] = resultCall!;
     const headers = (resultInit?.headers ?? {}) as Record<string, string>;

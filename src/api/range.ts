@@ -42,7 +42,10 @@ const PRESET_DAYS: Record<Exclude<PeriodPreset, 'all'>, number> = {
 function resolvePreset(preset: PeriodPreset): ResolvedRange {
   const end = currentHourEnd();
   if (preset === 'all') {
-    return { start: DATA_MIN_DATE, end };
+    // DATA_MIN_DATE は export 済みの共有インスタンスなので、そのまま返すと呼び出し側が
+    // start.setFullYear(...) 等の破壊的メソッドを呼んだ場合に以降の全ての「全期間」クエリと
+    // getCurrentLevel が汚染される。タイムスタンプから毎回新しい Date を組み立てて返す。
+    return { start: new Date(DATA_MIN_DATE.getTime()), end };
   }
   const start = new Date(end.getTime() - PRESET_DAYS[preset] * DAY_MS);
   return { start, end };

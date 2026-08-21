@@ -277,11 +277,14 @@ export type LevelStatistics = LevelStatisticsItem[];
 
 採用する方式:
 
-1. モジュール状態 `selectedMirrorIndex` の指すミラーで fetch（タイムアウト **5000ms**、`AbortController`）
-2. **ネットワーク層の失敗（fetch reject / タイムアウト）のときのみ**次のミラーへ進んで同一パスを再試行。HTTP エラーレスポンス（404/400/5xx）は**フォールバックしない**（どのミラーでも同じ結果になるため。本家 `fetchData` も fetch 例外時のみ切替）
-3. 4系統全滅で `ApiError`（`status: 0`、`cause` に最後の例外）
-4. 成功したミラーを `selectedMirrorIndex` に記憶し、localStorage キー **`mjsv:api-mirror`** にオリジン文字列で永続化。起動時に読み戻す（リストに無い値は無視）
-5. localStorage アクセスは try/catch で包み、失敗時はメモリのみで動作（プライベートモード・テスト環境対策）
+1. **リクエストごとに起点インデックスを1回だけスナップショットする**（`const startIndex = getSelectedMirrorIndex()` をループの外で読む）。以降のフォールバックは `(startIndex + i) % MIRRORS.length` で計算し、ループの中で可変グローバル `selectedMirrorIndex` を読み直さない
+2. 起点ミラーで fetch（タイムアウト **5000ms**、`AbortController`）
+3. **ネットワーク層の失敗（fetch reject / タイムアウト）のときのみ**次のミラーへ進んで同一パスを再試行。HTTP エラーレスポンス（404/400/5xx）は**フォールバックしない**（どのミラーでも同じ結果になるため。本家 `fetchData` も fetch 例外時のみ切替）
+4. 4系統全滅で `ApiError`（`status: 0`、`cause` に最後の例外）
+5. 成功したミラーを `selectedMirrorIndex` に記憶し、localStorage キー **`mjsv:api-mirror`** にオリジン文字列で永続化。起動時に読み戻す（リストに無い値は無視）
+6. localStorage アクセスは try/catch で包み、失敗時はメモリのみで動作（プライベートモード・テスト環境対策）
+
+**バグ修正の記録**（PR #22 Codex レビュー指摘・2件目）: 当初の実装はループ内で `getSelectedMirrorIndex()` を毎回読み直しており、`player_stats` と `player_extended_stats` のように同一操作内で並行発行される2本のリクエストが同時にミラー0で失敗すると、片方が成功して選択インデックスを書き換えた瞬間にもう片方が唯一生きているミラーを飛ばして残り全ミラーを試し「全滅」と誤判定する事故があった。要件 §5.2 の「1操作あたりAPIコール2回」を踏まえると通常運用で再現するため、起点インデックスをリクエスト開始時に1回だけスナップショットする方式に修正した。各リクエストは必ず全ミラーをちょうど1周する。
 
 ### 5.2 メモリキャッシュ
 
@@ -301,7 +304,8 @@ export type LevelStatistics = LevelStatisticsItem[];
 ### 5.4 特殊レスポンス（**実挙動未確認**・仕様書 §2.2 と本家 `handleResponse` 準拠）
 
 - **`{"maintenance": "..."}`** → `MaintenanceError(message)` を throw。本家は全コンポーネントを凍結する（never-resolve な Promise を返す）が、本アプリは throw して上位でメンテ画面表示に変換する（Issue 5 以降で catch。凍結方式はエラーハンドリングが不可能になるため不採用）
-- **`{"result_key": "..."}`** → 1000ms 待機 → `result/{result_key}` を `Cache-Control: max-age=0, no-cache` ヘッダ付きで再取得し、レスポンスを同じハンドラで再処理。**最大5回**で打ち切り `ApiError` を throw（本家は無制限再帰だが、無限ループ防止のため上限を設ける）。`result/...` の URL はキャッシュに入れない
+- **`{"result_key": "..."}`** → 1000ms 待機 → `{mirror}/{apiPrefix}/result/{result_key}` を `Cache-Control: max-age=0, no-cache` ヘッダ付きで再取得し、レスポンスを同じハンドラで再処理。**最大5回**で打ち切り `ApiError` を throw（本家は無制限再帰だが、無限ループ防止のため上限を設ける）。`result/...` の URL はキャッシュに入れない
+  - **バグ修正の記録**（PR #22 Codex レビュー指摘・1件目）: 当初の実装は `result/{result_key}` のみを URL に使っており、元リクエストの API プレフィックス（`api/v2/pl4` 等）が丸ごと欠落していた。仕様書 §3「パスはすべて `{mirror}{apiSuffix}` の後ろに続く」に基づき `{apiPrefix}/result/{result_key}` の形に修正した。加えて、再取得先のミラーは可変グローバル `getSelectedMirror()` を読み直すのではなく、**元リクエストで実際に成功したミラーを呼び出し元（`fetchWithFallback`）から引数で引き継ぐ**方式にした（グローバルの読み直しは指摘2と同種の並行実行時の不整合を招くため）。この経路自体は実挙動未確認のままであり、あくまで仕様書の規約に基づく修正である
 - 上記2分岐は JSON 本文がオブジェクトで該当キーを持つ場合のみ発動（配列レスポンスでは発動しない）
 
 ### 5.5 エラー分類（errors.ts）
@@ -418,6 +422,7 @@ export function setRangeResolver(resolver: RangeResolver): void;
 ```
 
 - preset の解決: `end = currentHourEnd()`、`start` は `all` → `DATA_MIN_DATE`、それ以外 → `end - N日`。**丸めた end を基準に引く**ため URL が1時間安定
+  - **バグ修正の記録**（PR #22 Codex レビュー指摘・3件目）: `all` の分岐は当初 `DATA_MIN_DATE`（export 済みの共有 `Date` インスタンス）をそのまま返しており、消費側が戻り値の `start` に対して `setFullYear` 等の破壊的メソッドを呼ぶと、以降その実行中の全ての「全期間」クエリと `getCurrentLevel` が汚染された開始時刻を使い続ける事故があった。タイムスタンプから `new Date(DATA_MIN_DATE.getTime())` で毎回新しいインスタンスを組み立てて返すよう修正した
 - 承諾後の実装追加は「`lastNGames` を解決する `RangeResolver` を実装して `setRangeResolver` する」だけ。既存6関数・呼び出し側 UI は無変更（要件 §5.2 の「実装追加のみで対応」を満たす）
 - playerId / numPlayers を resolve の引数に入れてあるのは lastNGames の境界時刻特定に必要なため。preset では未使用（`noUnusedParameters` に注意 — インターフェース実装の未使用引数は `_` プレフィックスにする）
 

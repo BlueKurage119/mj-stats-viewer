@@ -3,7 +3,7 @@
  * （docs/design/issue-3-api-layer.md §5）。
  */
 
-import { MIRRORS, getSelectedMirror, getSelectedMirrorIndex, setSelectedMirrorIndex } from './mirrors';
+import { MIRRORS, getSelectedMirrorIndex, setSelectedMirrorIndex } from './mirrors';
 import { ApiError, MaintenanceError } from './errors';
 
 const FETCH_TIMEOUT_MS = 5000;
@@ -40,14 +40,29 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * path（例 `api/v2/pl4/player_stats/...`）先頭の API プレフィックス（`api/v2/pl4`）を取り出す。
+ * 仕様書 §3「パスはすべて {mirror}{apiSuffix} の後ろに続く」に基づき、result_key の
+ * 再取得（§5.4）でも同じプレフィックスを付け直す必要があるため使う。
+ */
+function apiPrefixOf(path: string): string {
+  const [seg0, seg1, seg2] = path.split('/');
+  return `${seg0}/${seg1}/${seg2}`;
+}
+
+/**
  * 特殊レスポンス（maintenance / result_key）を処理し、最終的な JSON を返す。
  * result_key の再帰は同一ハンドラを通す（§5.4）。result/... のフェッチはキャッシュしない。
+ *
+ * mirror は「元リクエストで実際に成功したミラー」を呼び出し元から引き継ぐ（可変グローバル
+ * selectedMirrorIndex をここで読み直すと、並行リクエストの結果で値が変わっていた場合に
+ * 誤ったミラーへ result_key を再取得しにいくため）。
  */
 async function handleResponse<T>(
   response: Response,
   path: string,
   opts: ApiGetOptions,
   resultKeyRetries: number,
+  mirror: string,
 ): Promise<T> {
   if (response.status === 404 && opts.nullOn404) {
     return null as T;
@@ -67,11 +82,12 @@ async function handleResponse<T>(
         throw new ApiError(`result_key retry limit exceeded for ${path}`, response.status, path);
       }
       await delay(RESULT_KEY_WAIT_MS);
-      const resultPath = `result/${data.result_key}`;
-      const resultResponse = await fetchWithTimeout(`${getSelectedMirror()}/${resultPath}`, {
+      // 元リクエストと同じ API プレフィックス・同じミラーで result/{key} を再取得する（実挙動未確認・§5.4）
+      const resultUrl = `${mirror}/${apiPrefixOf(path)}/result/${data.result_key}`;
+      const resultResponse = await fetchWithTimeout(resultUrl, {
         headers: { 'Cache-Control': 'max-age=0, no-cache' },
       });
-      return handleResponse<T>(resultResponse, path, opts, resultKeyRetries + 1);
+      return handleResponse<T>(resultResponse, path, opts, resultKeyRetries + 1, mirror);
     }
   }
 
@@ -82,11 +98,17 @@ async function handleResponse<T>(
  * 選択中ミラーから逐次フォールバックしてリクエストする。
  * ネットワーク層の失敗（fetch reject / タイムアウト）のときのみ次のミラーへ進む。
  * HTTP エラーレスポンスはフォールバックしない（どのミラーでも同じ結果になるため）。
+ *
+ * 起点インデックスはループに入る前に1回だけスナップショットする。ループの中で
+ * 可変グローバル selectedMirrorIndex を読み直すと、並行リクエストが互いのフォールバック
+ * 中に選択インデックスを書き換え合い、「唯一生きているミラーを飛ばして全滅と誤判定する」
+ * 事故が起きるため（同時に発行される player_stats / player_extended_stats の2本で実際に踏む）。
  */
 async function fetchWithFallback<T>(path: string, opts: ApiGetOptions): Promise<T> {
   let lastError: unknown;
+  const startIndex = getSelectedMirrorIndex();
   for (let i = 0; i < MIRRORS.length; i++) {
-    const mirrorIndex = (getSelectedMirrorIndex() + i) % MIRRORS.length;
+    const mirrorIndex = (startIndex + i) % MIRRORS.length;
     const mirror = MIRRORS[mirrorIndex];
     let response: Response;
     try {
@@ -98,7 +120,7 @@ async function fetchWithFallback<T>(path: string, opts: ApiGetOptions): Promise<
     if (mirrorIndex !== getSelectedMirrorIndex()) {
       setSelectedMirrorIndex(mirrorIndex);
     }
-    return handleResponse<T>(response, path, opts, 0);
+    return handleResponse<T>(response, path, opts, 0, mirror);
   }
   throw new ApiError('all mirrors failed', 0, path, { cause: lastError });
 }

@@ -37,6 +37,21 @@ describe('resolveRange — preset (T11)', () => {
 
     expect(r1.end.getTime()).toBe(r2.end.getTime());
   });
+
+  it('"all" の start を破壊的に変更しても、以降の resolveRange 呼び出しは汚染されない（指摘3: エイリアシング）', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-21T12:34:56Z'));
+
+    const first = await resolveRange({ kind: 'preset', preset: 'all' }, 4, 123456789);
+    const originalTime = first.start.getTime();
+
+    // 消費側が誤って破壊的メソッドを呼んだケースを模す
+    first.start.setFullYear(1999);
+
+    const second = await resolveRange({ kind: 'preset', preset: 'all' }, 4, 123456789);
+    expect(second.start.getTime()).toBe(originalTime);
+    expect(DATA_MIN_DATE.getTime()).toBe(originalTime);
+  });
 });
 
 describe('resolveRange — lastNGames (T11)', () => {
