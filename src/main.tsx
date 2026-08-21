@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
@@ -7,16 +7,26 @@ import { ThemeProvider } from './theme/ThemeProvider';
 const root = createRoot(document.getElementById('root')!);
 
 async function bootstrap() {
-  if (import.meta.env.DEV && location.hash.startsWith('#/__theme')) {
-    const { ThemeGallery } = await import('./dev/ThemeGallery');
-    root.render(
-      <StrictMode>
-        <ThemeProvider>
-          <ThemeGallery />
-        </ThemeProvider>
-      </StrictMode>,
-    );
-    return;
+  if (import.meta.env.DEV) {
+    const devRoutes: Record<string, () => Promise<ReactElement>> = {
+      '#/__theme': async () => {
+        const { ThemeGallery } = await import('./dev/ThemeGallery');
+        return <ThemeGallery />;
+      },
+      '#/__components': async () => {
+        const { ComponentGallery } = await import('./dev/ComponentGallery');
+        return <ComponentGallery />;
+      },
+    };
+    const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
+    if (match) {
+      root.render(
+        <StrictMode>
+          <ThemeProvider>{await match[1]()}</ThemeProvider>
+        </StrictMode>,
+      );
+      return;
+    }
   }
 
   root.render(
