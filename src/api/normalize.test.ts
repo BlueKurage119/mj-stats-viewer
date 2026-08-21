@@ -40,12 +40,17 @@ describe('normalizePlayerExtendedStats', () => {
     expect(Object.prototype.hasOwnProperty.call(result, 'played_modes')).toBe(false);
   });
 
-  it('最近大铳の start_time（秒）が recentBigLoss.startedAt（Date）に変換される', () => {
+  it('最近大铳の start_time（秒）が recentBigLoss.startedAtMs（ミリ秒 number）に変換される', () => {
     const result = normalizePlayerExtendedStats(extendedStatsRaw);
+    const rawStartTimeSec = extendedStatsRaw.最近大铳?.start_time;
+    // フィクスチャに実際に値があることを前提にする（無ければこのテストは何も検証しない）
+    expect(rawStartTimeSec).toBeDefined();
 
     expect(result.recentBigLoss).toBeDefined();
-    expect(result.recentBigLoss?.startedAt).toBeInstanceOf(Date);
-    expect(result.recentBigLoss?.startedAt.getTime()).toBe((extendedStatsRaw.最近大铳?.start_time ?? 0) * 1000);
+    expect(typeof result.recentBigLoss?.startedAtMs).toBe('number');
+    // 期待値は実装の式をコピーせず、フィクスチャの実測値から独立に計算する（設計書 §1.3 C）
+    expect(result.recentBigLoss?.startedAtMs).toBe(1618494843 * 1000);
+    expect(rawStartTimeSec).toBe(1618494843);
     expect(result.recentBigLoss?.id).toBe(extendedStatsRaw.最近大铳?.id);
   });
 
@@ -57,7 +62,7 @@ describe('normalizePlayerExtendedStats', () => {
 });
 
 describe('normalizePlayerStats', () => {
-  // T2 (count 改名 / gameCount, latest_timestamp → lastPlayedAt は search_player 側だが
+  // T2 (count 改名 / gameCount, latest_timestamp → lastPlayedAtMs は search_player 側だが
   //     PlayerStats.count → gameCount の改名はここで検証する)
   it('count が gameCount に改名され、公開型に count フィールドが残らない', () => {
     const result = normalizePlayerStats(playerStatsRaw);
@@ -70,13 +75,15 @@ describe('normalizePlayerStats', () => {
 });
 
 describe('normalizePlayerSearchResult', () => {
-  // T2 (秒単位 latest_timestamp → Date 化)
-  it('latest_timestamp（秒）が lastPlayedAt（Date）に正しく変換される', () => {
+  // T2 (秒単位 latest_timestamp → ミリ秒 number 化)
+  it('latest_timestamp（秒）が lastPlayedAtMs（ミリ秒 number）に正しく変換される', () => {
     const [raw] = searchPlayerRaw;
+    expect(raw.latest_timestamp).toBe(1618494843);
     const result = normalizePlayerSearchResult(raw);
 
-    expect(result.lastPlayedAt).toBeInstanceOf(Date);
-    expect(result.lastPlayedAt.getTime()).toBe(raw.latest_timestamp * 1000);
+    expect(typeof result.lastPlayedAtMs).toBe('number');
+    // 期待値は実装の式をコピーせず、フィクスチャの実測値から独立に計算する（設計書 §1.3 C）
+    expect(result.lastPlayedAtMs).toBe(1618494843 * 1000);
     expect(result.id).toBe(raw.id);
     expect(result.nickname).toBe(raw.nickname);
   });

@@ -16,9 +16,11 @@
  *
  * 注意: Date インスタンスに対する Object.freeze は、setFullYear 等の日時セッターが
  * 通常のプロパティではなく内部スロットを操作するため、実行時の書き込み防止としては
- * 効かない（呼んでも例外にならず、値が変わってしまう）。`lastPlayedAt` /
- * `recentBigLoss.startedAt` はこの限界の対象であり、公開型を Date から数値に
- * 変える等の対応は後続 Issue で扱う（今回のスコープ外）。
+ * 効かない（呼んでも例外にならず、値が変わってしまう）。この限界のため、公開型からは
+ * Date を排除しミリ秒の number（`lastPlayedAtMs` / `recentBigLoss.startedAtMs`）で
+ * 保持している（Issue 23 §1）。公開7経路の戻り値には Date に限らず freeze で守れない
+ * 組み込み型（Map / Set / RegExp 等）も含めないこと（Issue 23 §1.5。endpoints.test.ts の
+ * 「公開7経路の戻り値に…」ブロックで再帰的に確認している）。
  */
 export function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {

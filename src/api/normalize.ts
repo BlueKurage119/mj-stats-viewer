@@ -4,7 +4,7 @@
  * 変換内容はこの3点だけ:
  *   1. count の改名（gameCount / roundCount。§4.2）
  *   2. 回数系6キーの ?? 0 補完（§4.4）
- *   3. 秒単位時刻の Date 化（§4.3）
+ *   3. 秒単位時刻のミリ秒 number 化（`Ms` サフィックス。§4.3。Issue 23 §1.2で Date から変更）
  * それ以外のキー名は中国語キー含めワイヤのまま維持する。
  *
  * 加えて、ここで構築する公開型オブジェクトは返す前に freeze.ts の deepFreeze で
@@ -32,7 +32,7 @@ export function normalizePlayerSearchResult(raw: RawPlayerSearchResult): PlayerS
     id: raw.id,
     nickname: raw.nickname,
     level: raw.level,
-    lastPlayedAt: new Date(raw.latest_timestamp * 1000),
+    lastPlayedAtMs: raw.latest_timestamp * 1000,
   });
 }
 
@@ -78,7 +78,7 @@ export function normalizePlayerExtendedStats(raw: RawPlayerExtendedStats): Playe
     recentBigLoss: 最近大铳
       ? {
           id: 最近大铳.id,
-          startedAt: new Date(最近大铳.start_time * 1000),
+          startedAtMs: 最近大铳.start_time * 1000,
           fans: 最近大铳.fans,
         }
       : undefined,
