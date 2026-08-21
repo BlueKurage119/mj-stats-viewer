@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveRange, DATA_MIN_DATE, defaultRangeResolver, setRangeResolver } from './range';
+import { resolveRange, DATA_MIN_MS, dataMinDate, defaultRangeResolver, setRangeResolver } from './range';
 import { RangeNotSupportedError } from './errors';
 
 afterEach(() => {
@@ -8,13 +8,13 @@ afterEach(() => {
 });
 
 describe('resolveRange — preset (T11)', () => {
-  it('"all" は DATA_MIN_DATE から現在の1時間切り上げまで', async () => {
+  it('"all" は DATA_MIN_MS から現在の1時間切り上げまで', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T12:34:56Z'));
 
     const { start, end } = await resolveRange({ kind: 'preset', preset: 'all' }, 4, 123456789);
 
-    expect(start.getTime()).toBe(DATA_MIN_DATE.getTime());
+    expect(start.getTime()).toBe(DATA_MIN_MS);
     expect(end.getTime()).toBe(Date.parse('2026-08-21T13:00:00Z'));
   });
 
@@ -50,7 +50,27 @@ describe('resolveRange — preset (T11)', () => {
 
     const second = await resolveRange({ kind: 'preset', preset: 'all' }, 4, 123456789);
     expect(second.start.getTime()).toBe(originalTime);
-    expect(DATA_MIN_DATE.getTime()).toBe(originalTime);
+    expect(DATA_MIN_MS).toBe(originalTime);
+  });
+});
+
+describe('DATA_MIN_MS / dataMinDate — 可変 Date を export しない（再レビュー指摘1）', () => {
+  it('DATA_MIN_MS は不変なプリミティブ number である', () => {
+    expect(typeof DATA_MIN_MS).toBe('number');
+  });
+
+  it('dataMinDate() は呼ぶたびに新しい Date インスタンスを返し、一方を破壊的に変更してももう一方は汚染されない', () => {
+    const a = dataMinDate();
+    const b = dataMinDate();
+
+    expect(a).not.toBe(b); // 同一インスタンスではない
+    expect(a.getTime()).toBe(DATA_MIN_MS);
+    expect(b.getTime()).toBe(DATA_MIN_MS);
+
+    a.setFullYear(1999);
+
+    expect(b.getTime()).toBe(DATA_MIN_MS); // b は汚染されない
+    expect(dataMinDate().getTime()).toBe(DATA_MIN_MS); // 以降の呼び出しも汚染されない
   });
 });
 

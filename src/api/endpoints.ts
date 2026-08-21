@@ -25,7 +25,7 @@ import type {
   LevelStatisticsItem,
   LevelWithDelta,
 } from './types';
-import { DATA_MIN_DATE, currentHourEnd } from './range';
+import { dataMinDate, currentHourEnd } from './range';
 
 function apiPrefix(numPlayers: NumPlayers): string {
   return numPlayers === 4 ? 'api/v2/pl4' : 'api/v2/pl3';
@@ -122,7 +122,7 @@ export async function getCurrentLevel(
   numPlayers: NumPlayers,
   playerId: number,
 ): Promise<CurrentLevelInfo | null> {
-  const stats = await getPlayerStats(numPlayers, playerId, DATA_MIN_DATE, currentHourEnd(), allModes(numPlayers));
+  const stats = await getPlayerStats(numPlayers, playerId, dataMinDate(), currentHourEnd(), allModes(numPlayers));
   if (!stats) {
     return null;
   }

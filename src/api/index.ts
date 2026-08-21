@@ -36,4 +36,4 @@ export {
 export type { CurrentLevelInfo } from './endpoints';
 
 export type { PeriodPreset, RangeSpec, ResolvedRange, RangeResolver } from './range';
-export { DATA_MIN_DATE, defaultRangeResolver, resolveRange, setRangeResolver } from './range';
+export { DATA_MIN_MS, dataMinDate, defaultRangeResolver, resolveRange, setRangeResolver } from './range';

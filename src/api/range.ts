@@ -9,7 +9,20 @@ import type { NumPlayers } from './gameMode';
 import { RangeNotSupportedError } from './errors';
 
 /** 2010-01-01T00:00:00Z（= 1262304000000。本家 PlayerDataLoader の既定 startDate と同値） */
-export const DATA_MIN_DATE = new Date(1262304000000);
+export const DATA_MIN_MS = 1262304000000;
+
+/**
+ * データ収集開始日を表す新しい Date を毎回組み立てて返す。
+ *
+ * 以前は `export const DATA_MIN_DATE = new Date(...)` として可変 Date インスタンスを
+ * 直接公開していたが、消費側が戻り値に対して setFullYear 等の破壊的メソッドを呼ぶと
+ * バレル経由で共有しているこのインスタンス自体が汚染され、以降の全ての「全期間」クエリと
+ * getCurrentLevel が壊れた開始時刻を使い続ける事故があった（PR #22 再レビュー指摘）。
+ * 不変なタイムスタンプ（DATA_MIN_MS）を保持し、Date が要る場所は都度これで組み立てる。
+ */
+export function dataMinDate(): Date {
+  return new Date(DATA_MIN_MS);
+}
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -42,10 +55,8 @@ const PRESET_DAYS: Record<Exclude<PeriodPreset, 'all'>, number> = {
 function resolvePreset(preset: PeriodPreset): ResolvedRange {
   const end = currentHourEnd();
   if (preset === 'all') {
-    // DATA_MIN_DATE は export 済みの共有インスタンスなので、そのまま返すと呼び出し側が
-    // start.setFullYear(...) 等の破壊的メソッドを呼んだ場合に以降の全ての「全期間」クエリと
-    // getCurrentLevel が汚染される。タイムスタンプから毎回新しい Date を組み立てて返す。
-    return { start: new Date(DATA_MIN_DATE.getTime()), end };
+    // dataMinDate() は呼ぶたびに新しい Date を返すため、共有インスタンスの汚染は起きない
+    return { start: dataMinDate(), end };
   }
   const start = new Date(end.getTime() - PRESET_DAYS[preset] * DAY_MS);
   return { start, end };

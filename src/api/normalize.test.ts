@@ -81,3 +81,34 @@ describe('normalizePlayerSearchResult', () => {
     expect(result.nickname).toBe(raw.nickname);
   });
 });
+
+describe('公開結果の不変性（PR #22 再レビュー指摘2: キャッシュ由来オブジェクトのインスタンス共有）', () => {
+  it('normalizePlayerStats の結果はトップレベル・ネストしたオブジェクト・配列とも凍結されている', () => {
+    const result = normalizePlayerStats(playerStatsRaw);
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.level)).toBe(true);
+    expect(Object.isFrozen(result.rank_rates)).toBe(true);
+
+    // strict mode（ESモジュール）なので、凍結済みへの書き込みは TypeError で即座に落ちる
+    expect(() => {
+      result.rank_rates.sort();
+    }).toThrow(TypeError);
+    expect(() => {
+      result.level.score = 9999;
+    }).toThrow(TypeError);
+  });
+
+  it('normalizePlayerExtendedStats の結果は recentBigLoss.fans まで再帰的に凍結されている', () => {
+    const result = normalizePlayerExtendedStats(extendedStatsRaw);
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.recentBigLoss)).toBe(true);
+    expect(Object.isFrozen(result.recentBigLoss?.fans)).toBe(true);
+    expect(Object.isFrozen(result.recentBigLoss?.fans[0])).toBe(true);
+
+    expect(() => {
+      result.recentBigLoss?.fans.push({ id: 0, label: 'x', count: 0, 役满: 0 });
+    }).toThrow(TypeError);
+  });
+});

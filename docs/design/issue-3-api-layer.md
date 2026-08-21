@@ -292,6 +292,9 @@ export type LevelStatistics = LevelStatisticsItem[];
 - **Promise を格納**する（本家は解決値を格納）。同一 URL の同時多発呼び出しが1リクエストに合流する（in-flight dedupe）。reject した Promise は Map から削除する（失敗をキャッシュしない）
 - 上限 **500 エントリ**。超過時は**全クリア**（本家と同じ。LRU は過剰設計 — 全クリア後の再取得コストは高々数リクエスト）
 - 「現在まで」を含むクエリの可変性は **`tag` パラメータの1時間タイムタグ**（§5.3）と **endMs の1時間丸め**（§6.3）で解決する: URL 自体が1時間ごとに変わるため、古いエントリは自然に参照されなくなり、500 上限の全クリアで回収される。TTL 管理は実装しない
+- **公開結果は不変である契約**（PR #22 再レビュー指摘2）: `apiGet` は解決値ではなく **Promise をキャッシュする**ため、同一 URL への複数回の呼び出しは同一の解決値インスタンスを共有する。`normalize.ts` が構築する公開型オブジェクト（`searchPlayer` / `getPlayerStats` / `getPlayerExtendedStats` / `getGlobalStatistics` の戻り値）は、返す前に**トップレベル・ネストしたオブジェクト・配列すべてを再帰的に `Object.freeze`** する。呼び出し側（Issue 4 以降）が `stats.rank_rates.sort()` のような in-place 操作を行うと、freeze 前は**エラーも警告も出ずにキャッシュ全体が破損した**が、freeze 後は ES モジュールの strict mode により **書き込みが `TypeError` で即座に落ちる**（静かな破損をうるさい失敗に変換する）。**呼び出し側は返り値をソート・変更する前に必ず複製すること**（`[...stats.rank_rates].sort()` 等）。
+  - 適用範囲: `normalize.ts` が構築するオブジェクトのみ。`getGlobalHistogram` / `getLevelStatistics` は正規化を経ずワイヤ形状のまま返しており、この fix の対象外（将来のテスト専用PRで扱う候補）
+  - 既知の限界: `Object.freeze` は `Date` インスタンスの `setFullYear` 等（内部スロットを操作するセッター）には効かない。`lastPlayedAt` / `recentBigLoss.startedAt` は freeze 済みでも書き換え可能なままなので、消費側は既存の Date を書き換えず新しい `Date` を組み立てて使うこと（§6.4 の `dataMinDate()` と同じ方針）
 
 ### 5.3 `tag` パラメータ（本家踏襲・§1.3 差分11）
 
@@ -392,8 +395,9 @@ export async function getCurrentLevel(
 ): Promise<CurrentLevelInfo | null>;
 ```
 
-- 実装は `getPlayerStats(numPlayers, playerId, DATA_MIN_DATE, currentHourEnd(), allModes(numPlayers))` の薄いラッパー。**独自の fetch はしない**ため、フィルタが全期間・全モードのときはキャッシュが完全に共有され追加リクエスト0で済む
-- `DATA_MIN_DATE` = `2010-01-01T00:00:00Z`（= 1262304000000。本家 `PlayerDataLoader` の既定 startDate と同値）
+- 実装は `getPlayerStats(numPlayers, playerId, dataMinDate(), currentHourEnd(), allModes(numPlayers))` の薄いラッパー。**独自の fetch はしない**ため、フィルタが全期間・全モードのときはキャッシュが完全に共有され追加リクエスト0で済む
+- データ収集開始日は `DATA_MIN_MS` = `1262304000000`（`2010-01-01T00:00:00Z`。本家 `PlayerDataLoader` の既定 startDate と同値）という**不変な number** で保持し、`Date` が要る場所では `dataMinDate()` を呼んで**毎回新しいインスタンス**を得る
+  - **バグ修正の記録**（PR #22 再レビュー指摘1）: 当初は `export const DATA_MIN_DATE = new Date(...)` として可変 `Date` インスタンスそのものをバレル経由で公開しており、`getCurrentLevel`（`endpoints.ts`）もこれを直接参照していた。消費側が戻り値（`resolveRange` の `start` 等、実体は同じ共有インスタンス）に対して `setFullYear` のような破壊的メソッドを呼ぶと、以降そのセッションの全ての「全期間」クエリと `getCurrentLevel` が汚染された開始時刻を使い続ける事故があった。`resolvePreset` 側の戻り値だけを複製する前回の修正（§6.4 参照）は公開 export 自体の可変性を直していなかったため、**export そのものを不変な数値 `DATA_MIN_MS` に変え、`Date` が必要な箇所は `dataMinDate()` 関数で都度生成する**方式にした。バレル（`index.ts`）も `DATA_MIN_MS` と `dataMinDate` を export し、可変 `Date` は一切公開しない
 - `currentHourEnd()` = 現在時刻を**次の1時間境界へ切り上げた** `Date`。終端が1時間の間 URL 安定になりキャッシュが効く（§5.2）。未来時刻の終端はフィルタ上限として無害（本家も「現在の分の末尾」を送っている）。§5.3 の1時間 tag と粒度が揃う
 
 ### 6.4 期間解決インターフェース（要件 §5.2 の将来拡張点）
@@ -421,8 +425,9 @@ export function resolveRange(
 export function setRangeResolver(resolver: RangeResolver): void;
 ```
 
-- preset の解決: `end = currentHourEnd()`、`start` は `all` → `DATA_MIN_DATE`、それ以外 → `end - N日`。**丸めた end を基準に引く**ため URL が1時間安定
-  - **バグ修正の記録**（PR #22 Codex レビュー指摘・3件目）: `all` の分岐は当初 `DATA_MIN_DATE`（export 済みの共有 `Date` インスタンス）をそのまま返しており、消費側が戻り値の `start` に対して `setFullYear` 等の破壊的メソッドを呼ぶと、以降その実行中の全ての「全期間」クエリと `getCurrentLevel` が汚染された開始時刻を使い続ける事故があった。タイムスタンプから `new Date(DATA_MIN_DATE.getTime())` で毎回新しいインスタンスを組み立てて返すよう修正した
+- preset の解決: `end = currentHourEnd()`、`start` は `all` → `dataMinDate()`、それ以外 → `end - N日`。**丸めた end を基準に引く**ため URL が1時間安定
+  - **バグ修正の記録（1周目・PR #22 Codex レビュー指摘3件目）**: `all` の分岐は当初 `DATA_MIN_DATE`（export 済みの共有 `Date` インスタンス）をそのまま返しており、消費側が戻り値の `start` に対して `setFullYear` 等の破壊的メソッドを呼ぶと、以降その実行中の全ての「全期間」クエリと `getCurrentLevel` が汚染された開始時刻を使い続ける事故があった。まず `resolvePreset` の戻り値だけを `new Date(DATA_MIN_DATE.getTime())` で複製する対症療法を入れたが、これは export 自体の可変性を直していなかった
+  - **バグ修正の記録（2周目・再レビュー指摘1）**: 検収担当と Codex の独立レビューが、export そのもの（`DATA_MIN_DATE`）がまだ可変 `Date` のままであること（`endpoints.ts` の `getCurrentLevel` が直接参照していた）を指摘。§6.3 に記載のとおり、export を不変な数値 `DATA_MIN_MS` に変え、`Date` が必要な箇所は `dataMinDate()` で都度生成する方式に修正した
 - 承諾後の実装追加は「`lastNGames` を解決する `RangeResolver` を実装して `setRangeResolver` する」だけ。既存6関数・呼び出し側 UI は無変更（要件 §5.2 の「実装追加のみで対応」を満たす）
 - playerId / numPlayers を resolve の引数に入れてあるのは lastNGames の境界時刻特定に必要なため。preset では未使用（`noUnusedParameters` に注意 — インターフェース実装の未使用引数は `_` プレフィックスにする）
 
