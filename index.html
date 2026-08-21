@@ -14,13 +14,16 @@
     <script>
       // ThemeProvider (src/theme/ThemeProvider.tsx) と同じ解決規則の先行ミニ実装。
       // localStorage キー名は必ず一致させること。
+      // storage 読み取りの失敗は OS 設定の解決を巻き添えにしないよう、
+      // try の範囲を getItem のみに限定する（ThemeProvider 側と同じ分離）。
+      var m = null;
       try {
-        var m = localStorage.getItem('mjsv:color-mode');
-        var dark = m === 'dark' || (m !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        m = localStorage.getItem('mjsv:color-mode');
       } catch (e) {
-        /* system既定のまま */
+        /* storage 不可の環境では未設定（= system 扱い）とする */
       }
+      var dark = m === 'dark' || (m !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     </script>
     <style>
       /*
