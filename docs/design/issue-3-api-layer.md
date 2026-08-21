@@ -106,6 +106,7 @@ src/api/
   normalize.ts      Raw → 公開型変換（?? 0 補完・count 改名・Date 化）
   endpoints.ts      公開6関数 + getCurrentLevel
   range.ts          期間解決（RangeSpec / RangeResolver）
+  freeze.ts         deepFreeze（公開結果は不変である契約。§5.2。再レビュー指摘で追加）
   testdata/         匿名化フィクスチャ JSON（§7.3）
   *.test.ts         vitest テスト（対象モジュールと同階層に併置）
 ```
@@ -292,9 +293,10 @@ export type LevelStatistics = LevelStatisticsItem[];
 - **Promise を格納**する（本家は解決値を格納）。同一 URL の同時多発呼び出しが1リクエストに合流する（in-flight dedupe）。reject した Promise は Map から削除する（失敗をキャッシュしない）
 - 上限 **500 エントリ**。超過時は**全クリア**（本家と同じ。LRU は過剰設計 — 全クリア後の再取得コストは高々数リクエスト）
 - 「現在まで」を含むクエリの可変性は **`tag` パラメータの1時間タイムタグ**（§5.3）と **endMs の1時間丸め**（§6.3）で解決する: URL 自体が1時間ごとに変わるため、古いエントリは自然に参照されなくなり、500 上限の全クリアで回収される。TTL 管理は実装しない
-- **公開結果は不変である契約**（PR #22 再レビュー指摘2）: `apiGet` は解決値ではなく **Promise をキャッシュする**ため、同一 URL への複数回の呼び出しは同一の解決値インスタンスを共有する。`normalize.ts` が構築する公開型オブジェクト（`searchPlayer` / `getPlayerStats` / `getPlayerExtendedStats` / `getGlobalStatistics` の戻り値）は、返す前に**トップレベル・ネストしたオブジェクト・配列すべてを再帰的に `Object.freeze`** する。呼び出し側（Issue 4 以降）が `stats.rank_rates.sort()` のような in-place 操作を行うと、freeze 前は**エラーも警告も出ずにキャッシュ全体が破損した**が、freeze 後は ES モジュールの strict mode により **書き込みが `TypeError` で即座に落ちる**（静かな破損をうるさい失敗に変換する）。**呼び出し側は返り値をソート・変更する前に必ず複製すること**（`[...stats.rank_rates].sort()` 等）。
-  - 適用範囲: `normalize.ts` が構築するオブジェクトのみ。`getGlobalHistogram` / `getLevelStatistics` は正規化を経ずワイヤ形状のまま返しており、この fix の対象外（将来のテスト専用PRで扱う候補）
-  - 既知の限界: `Object.freeze` は `Date` インスタンスの `setFullYear` 等（内部スロットを操作するセッター）には効かない。`lastPlayedAt` / `recentBigLoss.startedAt` は freeze 済みでも書き換え可能なままなので、消費側は既存の Date を書き換えず新しい `Date` を組み立てて使うこと（§6.4 の `dataMinDate()` と同じ方針）
+- **公開結果は不変である契約**（PR #22 再レビュー指摘2・および同種の追加指摘）: `apiGet` は解決値ではなく **Promise をキャッシュする**ため、同一 URL への複数回の呼び出しは同一の解決値インスタンスを共有する。呼び出し側（Issue 4 以降）が `stats.rank_rates.sort()` のような in-place 操作を行うと、freeze 前は**エラーも警告も出ずにキャッシュ全体が破損した**が、freeze 後は ES モジュールの strict mode により **書き込みが `TypeError` で即座に落ちる**（静かな破損をうるさい失敗に変換する）。**呼び出し側は返り値をソート・変更する前に必ず複製すること**（`[...stats.rank_rates].sort()` 等）
+  - **適用範囲: endpoints.ts の公開6関数（searchPlayer / getPlayerStats / getPlayerExtendedStats / getGlobalStatistics / getGlobalHistogram / getLevelStatistics）すべての戻り値。** 実装は共有ヘルパー `freeze.ts` の `deepFreeze` を使い、`normalize.ts` が構築する公開型オブジェクト（`searchPlayer` / `getPlayerStats` / `getPlayerExtendedStats` / `getGlobalStatistics`）はその内部で、正規化を経ずワイヤ形状のまま返す `getGlobalHistogram` / `getLevelStatistics` は `endpoints.ts` 側で明示的に `deepFreeze` を呼んで適用する
+    - **訂正**: 当初この項には「`getGlobalHistogram` / `getLevelStatistics` はこの fix の対象外・将来のテスト専用PRで扱う候補」と記載していたが誤りだった。検収担当がこの2関数について**キャッシュ由来の汚染が実際に伝播すること**（`histogramFull.bins[0]` への書き込みが通り2回目の呼び出しに汚染が見える／`getLevelStatistics` の要素タプルへの書き込みでソート順が変わる）を実証しており、これは production コードの欠陥であってテスト追加では直らない。両関数にも `deepFreeze` を適用して修正済み。`getLevelStatistics` は外側配列（`[...raw]` で複製済み）だけでなく**要素のタプルまで**凍結される
+  - 既知の限界（**後続 Issue で扱う production 課題**・今回は対応しない）: `Object.freeze` は `Date` インスタンスの `setFullYear` 等（内部スロットを操作するセッター）には効かない。`lastPlayedAt` / `recentBigLoss.startedAt` は freeze 済みでも書き換え可能なままであり、公開型を `Date` から不変な数値に変える等の対応が必要になる可能性がある。それまでは消費側が既存の `Date` を書き換えず新しい `Date` を組み立てて使う運用でカバーする（§6.4 の `dataMinDate()` と同じ方針）
 
 ### 5.3 `tag` パラメータ（本家踏襲・§1.3 差分11）
 

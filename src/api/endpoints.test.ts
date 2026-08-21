@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { searchPlayer, getPlayerStats, getGlobalStatistics, getLevelStatistics, getCurrentLevel } from './endpoints';
+import { searchPlayer, getPlayerStats, getGlobalStatistics, getGlobalHistogram, getLevelStatistics, getCurrentLevel } from './endpoints';
 import { setSelectedMirrorIndex } from './mirrors';
 import { FakeStorage, jsonResponse } from './testFixtures';
-import type { RawGlobalStatistics, RawPlayerStats, RawPlayerSearchResult, LevelStatisticsItem } from './types';
+import type { RawGlobalStatistics, RawPlayerStats, RawPlayerSearchResult, LevelStatisticsItem, GlobalHistogram } from './types';
 import playerStatsFixture from './testdata/player_stats.json';
 import globalStatistics2Fixture from './testdata/global_statistics_2.json';
 import searchPlayerFixture from './testdata/search_player.json';
 import levelStatisticsFixture from './testdata/level_statistics.json';
+import globalHistogramFixture from './testdata/global_histogram.json';
 
 const playerStatsRaw = playerStatsFixture as unknown as RawPlayerStats;
 const globalStatistics2Raw = globalStatistics2Fixture as unknown as RawGlobalStatistics;
 const searchPlayerRaw = searchPlayerFixture as unknown as RawPlayerSearchResult[];
 const levelStatisticsRaw = levelStatisticsFixture as unknown as LevelStatisticsItem[];
+const globalHistogramRaw = globalHistogramFixture as unknown as GlobalHistogram;
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', new FakeStorage());
@@ -164,5 +166,57 @@ describe('三麻（pl3）経路のカバレッジ（PR #22 再レビュー指摘
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toContain('/api/v2/pl3/player_stats/');
     expect(url).not.toContain('/api/v2/pl4/');
+  });
+});
+
+describe('公開結果の不変性 — getGlobalHistogram / getLevelStatistics（検収担当が実証した freeze 適用漏れ）', () => {
+  it('getGlobalHistogram の結果はトップレベル・ネストしたオブジェクト・配列（bins）まで凍結されている', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, globalHistogramRaw));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getGlobalHistogram(4);
+    const band0 = result['8']['0'];
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(band0)).toBe(true);
+    expect(Object.isFrozen(band0.和牌率)).toBe(true);
+    expect(Object.isFrozen(band0.和牌率.histogramFull)).toBe(true);
+    expect(Object.isFrozen(band0.和牌率.histogramFull?.bins)).toBe(true);
+
+    // トップレベルへの新キー追加も、ネストした bins への代入も TypeError で落ちる
+    expect(() => {
+      (result as unknown as Record<string, unknown>).zzz = 1;
+    }).toThrow(TypeError);
+    expect(() => {
+      band0.和牌率.histogramFull!.bins[0] = 999;
+    }).toThrow(TypeError);
+
+    // 「2回目の呼び出しで汚染が見える」症状が再現しないことを確認する
+    fetchMock.mockClear();
+    const second = await getGlobalHistogram(4);
+    expect(fetchMock).toHaveBeenCalledTimes(0); // キャッシュ共有（同一インスタンス）
+    expect(second['8']['0'].和牌率.histogramFull?.bins[0]).toBe(1);
+    expect(Object.prototype.hasOwnProperty.call(second, 'zzz')).toBe(false);
+  });
+
+  it('getLevelStatistics の結果は外側配列だけでなく要素のタプルまで凍結されている', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, levelStatisticsRaw));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getLevelStatistics(4);
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result[0])).toBe(true);
+
+    // 要素タプルへの書き込みは TypeError で落ちる（外側配列の複製だけでは防げない）
+    expect(() => {
+      result[0][1] = 99999;
+    }).toThrow(TypeError);
+
+    // 「2回目の呼び出しでソート順が変わる」症状が再現しないことを確認する
+    fetchMock.mockClear();
+    const second = await getLevelStatistics(4);
+    expect(fetchMock).toHaveBeenCalledTimes(0); // キャッシュ共有
+    expect(second.map((item) => item[1])).toEqual([10101, 10301, 10503, 10799]);
   });
 });

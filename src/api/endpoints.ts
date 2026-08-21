@@ -26,6 +26,7 @@ import type {
   LevelWithDelta,
 } from './types';
 import { dataMinDate, currentHourEnd } from './range';
+import { deepFreeze } from './freeze';
 
 function apiPrefix(numPlayers: NumPlayers): string {
   return numPlayers === 4 ? 'api/v2/pl4' : 'api/v2/pl3';
@@ -86,7 +87,11 @@ export async function getPlayerExtendedStats(
 
 export async function getGlobalHistogram(numPlayers: NumPlayers): Promise<GlobalHistogram> {
   const path = `${apiPrefix(numPlayers)}/global_histogram`;
-  return apiGet<GlobalHistogram>(path);
+  const raw = await apiGet<GlobalHistogram>(path);
+  // normalize.ts を経由しないワイヤ形状のまま返す関数だが、apiGet はキャッシュした
+  // Promise の解決値（= 同一インスタンス）を返すため、公開結果は不変である契約
+  // （§5.2）はここでも適用する必要がある（検収担当が汚染の伝播を実証）。
+  return deepFreeze(raw);
 }
 
 export async function getGlobalStatistics(
@@ -102,7 +107,10 @@ export async function getGlobalStatistics(
 export async function getLevelStatistics(numPlayers: NumPlayers): Promise<LevelStatistics> {
   const path = `${apiPrefix(numPlayers)}/level_statistics`;
   const raw = await apiGet<LevelStatisticsItem[]>(path);
-  return [...raw].sort((a, b) => a[1] - b[1]);
+  // 外側配列は [...raw] で複製しているため .sort() 自体は安全だが、要素のタプルは
+  // キャッシュされた raw と共有されたままなので、そちらも不変化する必要がある
+  // （§5.2。外側配列だけでなく要素のタプルまで凍結すること）。
+  return deepFreeze([...raw].sort((a, b) => a[1] - b[1]));
 }
 
 export type CurrentLevelInfo = {
