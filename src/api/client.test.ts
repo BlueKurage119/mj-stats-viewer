@@ -1,0 +1,215 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { apiGet } from './client';
+import { ApiError, MaintenanceError } from './errors';
+import { MIRRORS, setSelectedMirrorIndex } from './mirrors';
+import { FakeStorage, jsonResponse } from './testFixtures';
+
+let pathCounter = 0;
+/** テストごとに一意の path を発行し、client.ts 内部のモジュール共有キャッシュを汚染しないようにする */
+function uniquePath(label: string): string {
+  pathCounter += 1;
+  return `api/v2/pl4/__test_${label}_${pathCounter}`;
+}
+
+let fakeStorage: FakeStorage;
+
+beforeEach(() => {
+  fakeStorage = new FakeStorage();
+  vi.stubGlobal('localStorage', fakeStorage);
+  setSelectedMirrorIndex(0);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+describe('apiGet — キャッシュ (T3)', () => {
+  it('同一 URL 2回呼び出しても fetch は1回だけ', async () => {
+    const path = uniquePath('cache_sequential');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { value: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = await apiGet<{ value: number }>(path);
+    const second = await apiGet<{ value: number }>(path);
+
+    expect(first).toEqual({ value: 1 });
+    expect(second).toEqual({ value: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('同一 URL への同時多発呼び出しも fetch は1回に合流する（in-flight dedupe）', async () => {
+    const path = uniquePath('cache_concurrent');
+    let resolveFetch!: (r: Response) => void;
+    const fetchMock = vi.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p1 = apiGet<{ value: number }>(path);
+    const p2 = apiGet<{ value: number }>(path);
+    resolveFetch(jsonResponse(200, { value: 42 }));
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toEqual({ value: 42 });
+    expect(r2).toEqual({ value: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('apiGet — ミラーフォールバック (T4 / T5)', () => {
+  it('1st ミラー reject → 2nd ミラーで成功し、以後の呼び出しは2ndへ直行。localStorage も更新される', async () => {
+    const path1 = uniquePath('fallback_1');
+    const path2 = uniquePath('fallback_2');
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.startsWith(MIRRORS[0])) {
+        return Promise.reject(new Error('network down'));
+      }
+      return Promise.resolve(jsonResponse(200, { url }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result1 = await apiGet<{ url: string }>(path1);
+    expect(result1.url).toBe(`${MIRRORS[1]}/${path1}`);
+    expect(fakeStorage.getItem('mjsv:api-mirror')).toBe(MIRRORS[1]);
+
+    fetchMock.mockClear();
+    const result2 = await apiGet<{ url: string }>(path2);
+    expect(result2.url).toBe(`${MIRRORS[1]}/${path2}`);
+    // 2nd ミラーへ直行しているので呼び出しは1回だけ（1st ミラーへの再トライが無い）
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('4ミラー全 reject → ApiError（status 0）', async () => {
+    const path = uniquePath('all_fail');
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiGet(path)).rejects.toMatchObject({ status: 0 });
+    expect(fetchMock).toHaveBeenCalledTimes(MIRRORS.length);
+  });
+
+  it('同時に異なる path がフォールバックしても、後発のリクエストが唯一生きているミラーを飛ばさない', async () => {
+    // 再現シナリオ（指摘2）: A・B が同時にミラー0で失敗 → A がミラー1で成功し
+    // selectedMirrorIndex を書き換える → B がループ内で可変グローバルを読み直す実装だと
+    // ミラー1を飛ばして 2→3→0 を試し「全ミラー失敗」と誤報告する。
+    // 各リクエストは呼び出し開始時点の起点インデックスを1回だけスナップショットし、
+    // 以降はそれを使って全ミラーをちょうど1周するべき。
+    vi.useFakeTimers();
+    const pathA = uniquePath('race_a');
+    const pathB = uniquePath('race_b');
+    let pathBMirror0Calls = 0;
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === `${MIRRORS[0]}/${pathA}`) {
+        // A の1stミラーは即座に失敗する
+        return Promise.reject(new Error('mirror0 down (A)'));
+      }
+      if (url === `${MIRRORS[0]}/${pathB}`) {
+        pathBMirror0Calls += 1;
+        if (pathBMirror0Calls === 1) {
+          // B の1stミラー失敗は、A がミラー1で成功して selectedMirrorIndex を
+          // 書き換え終えた「あと」に確定させる（10ms 遅延）
+          return new Promise<Response>((_, reject) => {
+            setTimeout(() => reject(new Error('mirror0 down (B)')), 10);
+          });
+        }
+        // バグ挙動で mirror0 に再度たどり着いた場合はテストがハングしないよう即失敗させる
+        return Promise.reject(new Error(`mirror0 down (B) retry #${pathBMirror0Calls}`));
+      }
+      if (url === `${MIRRORS[1]}/${pathA}` || url === `${MIRRORS[1]}/${pathB}`) {
+        return Promise.resolve(jsonResponse(200, { url }));
+      }
+      // ミラー2・3 は用意していない（正しい実装なら到達しないはず）
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promiseA = apiGet<{ url: string }>(pathA);
+    const promiseB = apiGet<{ url: string }>(pathB);
+
+    // A は fake timer に依存せず即座に解決する（ミラー1が即成功するため）
+    const resultA = await promiseA;
+    expect(resultA.url).toBe(`${MIRRORS[1]}/${pathA}`);
+    expect(fakeStorage.getItem('mjsv:api-mirror')).toBe(MIRRORS[1]);
+
+    // ここで B の1stミラー失敗を確定させる（A の更新は既に完了済み）
+    await vi.advanceTimersByTimeAsync(10);
+
+    const resultB = await promiseB;
+    expect(resultB.url).toBe(`${MIRRORS[1]}/${pathB}`);
+  });
+});
+
+describe('apiGet — 404 の扱い (T6)', () => {
+  it('nullOn404: true の場合、HTTP 404 は throw せず null を解決する', async () => {
+    const path = uniquePath('404_null');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(404, { error: 'id_not_found' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await apiGet(path, { nullOn404: true });
+    expect(result).toBeNull();
+  });
+
+  it('nullOn404 を指定しないエンドポイントの 404 は ApiError を throw する', async () => {
+    const path = uniquePath('404_throw');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(404, { error: 'id_not_found' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiGet(path)).rejects.toBeInstanceOf(ApiError);
+    await expect(apiGet(uniquePath('404_throw_status'))).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('apiGet — 特殊レスポンス (T7)', () => {
+  it('{maintenance} は MaintenanceError を throw する', async () => {
+    const path = uniquePath('maintenance');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { maintenance: 'under maintenance' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiGet(path)).rejects.toBeInstanceOf(MaintenanceError);
+  });
+
+  it('{result_key} は1秒待機後に result/{key} を再取得し最終値を返す（URL は元リクエストと同じ mirror/apiPrefix を維持する）', async () => {
+    vi.useFakeTimers();
+    const path = uniquePath('result_key');
+    // path は api/v2/pl4/__test_result_key_N の形。result 再取得は同じ mirror・同じ
+    // api プレフィックス（api/v2/pl4）を保った完全一致 URL でなければならない（指摘1）。
+    const expectedResultUrl = `${MIRRORS[0]}/api/v2/pl4/result/abc123`;
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === expectedResultUrl) {
+        return Promise.resolve(jsonResponse(200, { value: 'done' }));
+      }
+      return Promise.resolve(jsonResponse(200, { result_key: 'abc123' }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promise = apiGet<{ value: string }>(path);
+    await vi.advanceTimersByTimeAsync(1000);
+    const result = await promise;
+
+    expect(result).toEqual({ value: 'done' });
+    const calls = fetchMock.mock.calls as [string, RequestInit | undefined][];
+    // 部分一致ではなく、mirror・apiPrefix を含む URL 全体の完全一致を検証する
+    const resultCall = calls.find(([url]) => url === expectedResultUrl);
+    expect(resultCall).toBeDefined();
+    const [, resultInit] = resultCall!;
+    const headers = (resultInit?.headers ?? {}) as Record<string, string>;
+    expect(headers['Cache-Control']).toBe('max-age=0, no-cache');
+  });
+
+  it('result_key が5回を超えて解決しない場合は ApiError を throw する', async () => {
+    vi.useFakeTimers();
+    const path = uniquePath('result_key_giveup');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { result_key: 'never-done' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promise = apiGet(path);
+    const assertion = expect(promise).rejects.toBeInstanceOf(ApiError);
+    await vi.advanceTimersByTimeAsync(1000 * 6);
+    await assertion;
+  });
+});

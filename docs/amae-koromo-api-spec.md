@@ -114,13 +114,13 @@ Disallow: /
 
 ## 3. API エンドポイント一覧
 
-パスはすべて `{mirror}{apiSuffix}` の後ろに続く。日時は **ミリ秒 Unix タイムスタンプ**（レコード内の `startTime`/`endTime` は秒単位なので注意）。`mode` パラメータは GameMode ID を `.` 区切りで連結（例: `mode=16.12`）。
+パスはすべて `{mirror}{apiSuffix}` の後ろに続く。日時は **ミリ秒 Unix タイムスタンプ**（レコード内の `startTime`/`endTime` は秒単位なので注意）。`mode` パラメータは GameMode ID を `.` 区切りで連結（例: `mode=16.12`）。**`mode` は必須**で、`?mode=`（空文字）は 400 `{"error":"mode_is_required"}` を返す（2026-08-21 実測）。「全モード」を表現するには**全 GameMode ID を明示列挙**する（本家も同様に常に全列挙を送っている）。
 
 ### 3.1 プレイヤー関連
 
 | エンドポイント | 説明 |
 |---|---|
-| `GET search_player/{prefix}?limit=20&tag=all` | ニックネーム前方一致検索。`id`, `nickname`, `level`, `latest_timestamp` を返す |
+| `GET search_player/{prefix}?limit=20&tag=all` | ニックネーム前方一致検索。`id`, `nickname`, `level`, `latest_timestamp`（**秒単位**）を返す。**検索インデックスは四麻/三麻横断**で、`pl4` で引いても三麻 levelId（2xxxx）のプレイヤーが返る。`level` を対象モードの段位と決めつけないこと（2026-08-21 実測） |
 | `GET player_stats/{id}/{startTsMs}/{endTsMs}?mode={modes}` | 基本統計（試合数、段位、順位率、平均順位、飛び率など） |
 | `GET player_extended_stats/{id}/{startTsMs}/{endTsMs}?mode={modes}` | 詳細統計（和了率、放銃率、副露率、立直率、平均打点ほか約50項目） |
 | `GET player_records/{id}/{cursorTsMs}/{startTsMs}?limit=100&mode={modes}&descending=true` | プレイヤーの対局履歴（カーソルページング: 返ってきた最後の `startTime*1000-1` を次の cursor に）⚠️ CAP必須 |
@@ -150,7 +150,7 @@ Disallow: /
 
 | エンドポイント | 説明 |
 |---|---|
-| `GET global_statistics_2?mode=16.12...` | モード×段位別の全体統計（basic + extended） |
+| `GET global_statistics_2?mode=16.12...` | 全体統計（basic + extended）。**トップレベルキーはリクエストした mode 文字列そのもの1個**で、モードごとには分かれない（＝リクエスト単位の1集計）。その配下が段位帯別。本家型にある `num_players` は実レスポンスに存在しない（2026-08-21 実測） |
 | `GET global_statistics_year?mode=...` | 直近1年版 |
 | `GET global_statistics_snapshot/{YYYY-MM-DD}?mode=...` | 日次スナップショット |
 | `GET level_statistics` | 段位分布 `[zone, levelId, num_players][]`（zone: 1=中国 2=日本 3=英語圏） |
@@ -264,6 +264,8 @@ Disallow: /
 | 先制率 / 追立率 / 被追率 | 先制リーチ率 / 追っかけ率 / 追っかけられ率 |
 | 打点效率 / 铳点损失 / 净打点效率 / 局收支 | 打点効率系指標 |
 | 最近大铳 | 最近の大物手放銃（id, start_time, fans） |
+
+**⚠️ 回数系キーは値0のときレスポンスから省略される**（2026-08-21 実測）。`役满` `累计役满` `W立直` `流满` `最大连庄` `最大累计番数` が対象で、54戦のプレイヤーでは前4つが実際に欠落していた。**この省略は `player_extended_stats` に限らず `global_statistics_2` の extended 側でも起こる**（段位帯によって `累计役满` が欠落する例を確認）。取得層で `?? 0` 補完すること。
 
 ### 4.5 段位ポイントの取得 ★重要
 

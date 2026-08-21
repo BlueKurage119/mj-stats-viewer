@@ -1,0 +1,12 @@
+{
+  "count": 54,
+  "level": { "id": 10301, "score": 695, "delta": -11 },
+  "max_level": { "id": 10301, "score": 1184, "delta": 0 },
+  "rank_rates": [0.2037, 0.1481, 0.3888, 0.2592],
+  "rank_avg_score": [37718, 27250, 21357, 11079],
+  "avg_rank": 2.7037,
+  "negative_rate": 0.0555,
+  "id": 123456789,
+  "nickname": "テストプレイヤー",
+  "played_modes": [8]
+}
