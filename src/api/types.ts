@@ -147,7 +147,7 @@ export type PlayerSearchResult = {
   nickname: string;
   /** 注意: pl4 検索でも三麻 levelId (2xxxx) が返りうる（§1.3 差分4） */
   level: LevelWithDelta;
-  lastPlayedAt: Date; // ワイヤ latest_timestamp（秒）から変換
+  lastPlayedAtMs: number; // ワイヤ latest_timestamp（秒）からミリ秒に変換（Issue 23 §1.2。Date は freeze で保護できないため不採用）
 };
 
 export type PlayerStats = {
@@ -225,9 +225,9 @@ export type PlayerExtendedStats = {
   平均起手向听亲?: number; // 親番が無いと欠落しうる（本家型で optional）
   平均起手向听子?: number;
   recentBigLoss?: {
-    // ワイヤ 最近大铳（start_time 秒 → Date 化・改名）
+    // ワイヤ 最近大铳（start_time 秒 → ミリ秒の number に変換・改名。Issue 23 §1.2）
     id: string;
-    startedAt: Date;
+    startedAtMs: number;
     fans: FanStatEntry[];
   };
 };

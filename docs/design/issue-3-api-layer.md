@@ -103,7 +103,7 @@ src/api/
   mirrors.ts        ミラーリスト・選択状態・localStorage 永続化
   client.ts         fetch 核（タイムアウト・フォールバック・キャッシュ・特殊レスポンス）
   types.ts          ワイヤ型（Raw*）と公開型
-  normalize.ts      Raw → 公開型変換（?? 0 補完・count 改名・Date 化）
+  normalize.ts      Raw → 公開型変換（?? 0 補完・count 改名・秒→ミリ秒 number 化）
   endpoints.ts      公開6関数 + getCurrentLevel
   range.ts          期間解決（RangeSpec / RangeResolver）
   freeze.ts         deepFreeze（公開結果は不変である契約。§5.2。再レビュー指摘で追加）
@@ -142,7 +142,7 @@ export function joinModes(modes: readonly GameMode[]): string;
 - **公開型**: `normalize.ts` で変換して返す。変換内容は次の3点だけ（それ以外のキー名は中国語キー含めワイヤのまま維持。対訳・表示名は Issue 4 以降の責務）:
   1. **`count` の改名**（§4.2）
   2. **回数系キーの `?? 0` 補完**（§4.4）
-  3. **秒単位時刻の `Date` 化**（§4.3）
+  3. **秒単位時刻のミリ秒 number 化**（`Ms` サフィックス。§4.3。Issue 23 §1.2で Date から変更）
 
 ### 4.2 `count` の二重の意味 → 正規化で名前を分ける
 
@@ -153,11 +153,14 @@ export function joinModes(modes: readonly GameMode[]): string;
 
 公開型には `count` という名前のフィールドを**残さない**（残すと呼び出し側で混同が再発する）。`global_statistics_2` の basic/extended 内の `count` も同じ規則で `gameCount` / `roundCount` に改名する。
 
-### 4.3 時刻単位の混在 → 境界で `Date` に閉じ込める（branded type は不採用）
+### 4.3 時刻単位の混在 → 境界で閉じ込める（branded type は不採用）
 
-- **公開関数の期間引数は `Date` 型のみ**受け取り、内部で `.getTime()` して URL パス（ミリ秒）に埋める。number を直接受けないため「秒を渡してしまう」事故が型レベルで起きない
-- **レスポンス内の秒単位時刻は正規化で `Date` に変換**し、フィールド名も改名する（`latest_timestamp`(秒) → `lastPlayedAt: Date`、`最近大铳.start_time`(秒) → `recentBigLoss.startedAt: Date`）
-- branded type（`TimestampMs` 等）は、公開面から生 number が消える本方式では防御が二重になるだけなので**不採用**（過剰設計の回避）
+**【Issue 23 改訂】** 出力側（正規化結果）は当初 `Date` 化する方針だったが、`Object.freeze` は `Date` の内部スロット（`setFullYear` 等のセッター）を保護できず、消費側の1回の破壊的操作が共有キャッシュ全体を静かに汚染する事故があった（Issue 23 の検収で `recentBigLoss.startedAt.setFullYear(1999)` が例外を出さずに実値を変えることを実測）。このため Issue 23 で**出力側だけを** `Date` から不変な**ミリ秒の number**（`Ms` サフィックス）に変更した。単位の取り違え防止という §4.3 本来の目的は、`Date` 型ではなくフィールド名の `Ms` サフィックスで引き続き維持する。
+
+- **公開関数の期間引数は `Date` 型のみ**受け取り、内部で `.getTime()` して URL パス（ミリ秒）に埋める。number を直接受けないため「秒を渡してしまう」事故が型レベルで起きない。**引数側はこの Issue 23 改訂の対象外**（共有インスタンスではなく呼び出しごとに消費側が用意するため、`Date` を書き換えられても他の呼び出しに影響しない。`getTime()` を強制する型の利点もそのまま活きる）
+- **レスポンス内の秒単位時刻は正規化でミリ秒の number に変換**し、フィールド名に `Ms` サフィックスを付けて改名する（`latest_timestamp`(秒) → `lastPlayedAtMs: number`、`最近大铳.start_time`(秒) → `recentBigLoss.startedAtMs: number`）
+- **「引数は `Date`・出力は number」という非対称性は意図的**。公開結果はキャッシュ経由で共有され `Object.freeze` で不変性を保証する必要があるため `Date` を置けないが、引数は呼び出しごとの使い捨てであり `Date` のままで安全かつ「秒を渡してしまう」事故防止の利点を保てる
+- branded type（`TimestampMs` 等）は**不採用**。【Issue 23 改訂】公開面に生 number（`lastPlayedAtMs` / `startedAtMs`）が載るようになった今も、単位はフィールド名の `Ms` サフィックスで明示されており、公開面に単位の異なる number が混在することはない。branded type は同じ問題への二重の防御になるだけなので過剰設計として不採用のままとする
 - 内部（client.ts / range.ts）では `startMs` / `endMs` のように**必ず単位サフィックス付きの変数名**を使う
 
 ### 4.4 公開型定義
@@ -174,7 +177,7 @@ export type PlayerSearchResult = {
   nickname: string;
   /** 注意: pl4 検索でも三麻 levelId (2xxxx) が返りうる（§1.3 差分4） */
   level: LevelWithDelta;
-  lastPlayedAt: Date;   // ワイヤ latest_timestamp（秒）から変換
+  lastPlayedAtMs: number;   // ワイヤ latest_timestamp（秒）からミリ秒に変換（Issue 23 §1.2で Date から変更）
 };
 
 export type PlayerStats = {
@@ -220,9 +223,9 @@ export type PlayerExtendedStats = {
   // --- 母数条件により欠落しうるもの（0 補完すると意味が変わるため optional のまま） ---
   平均起手向听亲?: number;      // 親番が無いと欠落しうる（本家型で optional）
   平均起手向听子?: number;
-  recentBigLoss?: {             // ワイヤ 最近大铳（start_time 秒 → Date 化・改名）
+  recentBigLoss?: {             // ワイヤ 最近大铳（start_time 秒 → ミリ秒 number 化・改名）
     id: string;
-    startedAt: Date;
+    startedAtMs: number;        // Issue 23 §1.2で Date から変更
     fans: FanStatEntry[];
   };
 };
@@ -296,7 +299,7 @@ export type LevelStatistics = LevelStatisticsItem[];
 - **公開結果は不変である契約**（PR #22 再レビュー指摘2・および同種の追加指摘）: `apiGet` は解決値ではなく **Promise をキャッシュする**ため、同一 URL への複数回の呼び出しは同一の解決値インスタンスを共有する。呼び出し側（Issue 4 以降）が `stats.rank_rates.sort()` のような in-place 操作を行うと、freeze 前は**エラーも警告も出ずにキャッシュ全体が破損した**が、freeze 後は ES モジュールの strict mode により **書き込みが `TypeError` で即座に落ちる**（静かな破損をうるさい失敗に変換する）。**呼び出し側は返り値をソート・変更する前に必ず複製すること**（`[...stats.rank_rates].sort()` 等）
   - **適用範囲: endpoints.ts の公開6関数（searchPlayer / getPlayerStats / getPlayerExtendedStats / getGlobalStatistics / getGlobalHistogram / getLevelStatistics）すべての戻り値。** 実装は共有ヘルパー `freeze.ts` の `deepFreeze` を使い、`normalize.ts` が構築する公開型オブジェクト（`searchPlayer` / `getPlayerStats` / `getPlayerExtendedStats` / `getGlobalStatistics`）はその内部で、正規化を経ずワイヤ形状のまま返す `getGlobalHistogram` / `getLevelStatistics` は `endpoints.ts` 側で明示的に `deepFreeze` を呼んで適用する
     - **訂正**: 当初この項には「`getGlobalHistogram` / `getLevelStatistics` はこの fix の対象外・将来のテスト専用PRで扱う候補」と記載していたが誤りだった。検収担当がこの2関数について**キャッシュ由来の汚染が実際に伝播すること**（`histogramFull.bins[0]` への書き込みが通り2回目の呼び出しに汚染が見える／`getLevelStatistics` の要素タプルへの書き込みでソート順が変わる）を実証しており、これは production コードの欠陥であってテスト追加では直らない。両関数にも `deepFreeze` を適用して修正済み。`getLevelStatistics` は外側配列（`[...raw]` で複製済み）だけでなく**要素のタプルまで**凍結される
-  - 既知の限界（**後続 Issue で扱う production 課題**・今回は対応しない）: `Object.freeze` は `Date` インスタンスの `setFullYear` 等（内部スロットを操作するセッター）には効かない。`lastPlayedAt` / `recentBigLoss.startedAt` は freeze 済みでも書き換え可能なままであり、公開型を `Date` から不変な数値に変える等の対応が必要になる可能性がある。それまでは消費側が既存の `Date` を書き換えず新しい `Date` を組み立てて使う運用でカバーする（§6.4 の `dataMinDate()` と同じ方針）
+  - **【Issue 23 で解消済み】**: `Object.freeze` は `Date` インスタンスの `setFullYear` 等（内部スロットを操作するセッター）には効かず、`lastPlayedAt` / `recentBigLoss.startedAt` は freeze 済みでも書き換え可能なままだった。Issue 23 で公開型から `Date` を排除し、不変なミリ秒の number（`lastPlayedAtMs` / `recentBigLoss.startedAtMs`）に変更したことでこの穴は消えた（§4.3 参照）。公開7経路の戻り値に freeze で守れない組み込み型（Date/Map/Set/RegExp 等）が他に残っていないことも Issue 23 で網羅的に確認済み
 
 ### 5.3 `tag` パラメータ（本家踏襲・§1.3 差分11）
 
@@ -463,7 +466,7 @@ export function setRangeResolver(resolver: RangeResolver): void;
 | # | 対象 | ケース |
 |---|---|---|
 | T1 | normalize | 回数系6キーが欠落したフィクスチャ → 全て 0 で補完され、存在するキー（最大连庄=2 等）は実値保持 |
-| T2 | normalize | `count` が公開型から消え `gameCount` / `roundCount` に載る。`latest_timestamp`(秒) → `lastPlayedAt` が正しい `Date` |
+| T2 | normalize | `count` が公開型から消え `gameCount` / `roundCount` に載る。`latest_timestamp`(秒) → `lastPlayedAtMs`（ミリ秒 number）が正しく変換される（Issue 23 §1.2で Date から変更） |
 | T3 | client | 同一 URL 2回呼び → fetch は1回（キャッシュ）。同時2連呼びでも1回（in-flight 合流） |
 | T4 | client | 1st ミラー reject → 2nd ミラーで成功、以後の呼び出しは2ndへ直行。localStorage 書き込み値も検証 |
 | T5 | client | 4ミラー全 reject → `ApiError`（status 0） |

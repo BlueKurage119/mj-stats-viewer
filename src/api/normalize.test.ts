@@ -1,13 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { normalizePlayerStats, normalizePlayerExtendedStats, normalizePlayerSearchResult } from './normalize';
-import type { RawPlayerStats, RawPlayerExtendedStats, RawPlayerSearchResult } from './types';
+import {
+  normalizePlayerStats,
+  normalizePlayerExtendedStats,
+  normalizePlayerSearchResult,
+  normalizeGlobalStatistics,
+} from './normalize';
+import type { RawPlayerStats, RawPlayerExtendedStats, RawPlayerSearchResult, RawGlobalStatistics } from './types';
 import playerExtendedStatsFixture from './testdata/player_extended_stats.json';
 import playerStatsFixture from './testdata/player_stats.json';
 import searchPlayerFixture from './testdata/search_player.json';
+import globalStatistics2Fixture from './testdata/global_statistics_2.json';
 
 const extendedStatsRaw = playerExtendedStatsFixture as unknown as RawPlayerExtendedStats;
 const playerStatsRaw = playerStatsFixture as unknown as RawPlayerStats;
 const searchPlayerRaw = searchPlayerFixture as unknown as RawPlayerSearchResult[];
+const globalStatistics2Raw = globalStatistics2Fixture as unknown as RawGlobalStatistics;
 
 describe('normalizePlayerExtendedStats', () => {
   // T1
@@ -40,12 +47,17 @@ describe('normalizePlayerExtendedStats', () => {
     expect(Object.prototype.hasOwnProperty.call(result, 'played_modes')).toBe(false);
   });
 
-  it('最近大铳の start_time（秒）が recentBigLoss.startedAt（Date）に変換される', () => {
+  it('最近大铳の start_time（秒）が recentBigLoss.startedAtMs（ミリ秒 number）に変換される', () => {
     const result = normalizePlayerExtendedStats(extendedStatsRaw);
+    const rawStartTimeSec = extendedStatsRaw.最近大铳?.start_time;
+    // フィクスチャに実際に値があることを前提にする（無ければこのテストは何も検証しない）
+    expect(rawStartTimeSec).toBeDefined();
 
     expect(result.recentBigLoss).toBeDefined();
-    expect(result.recentBigLoss?.startedAt).toBeInstanceOf(Date);
-    expect(result.recentBigLoss?.startedAt.getTime()).toBe((extendedStatsRaw.最近大铳?.start_time ?? 0) * 1000);
+    expect(typeof result.recentBigLoss?.startedAtMs).toBe('number');
+    // 期待値は実装の式をコピーせず、フィクスチャの実測値から独立に計算する（設計書 §1.3 C）
+    expect(result.recentBigLoss?.startedAtMs).toBe(1618494843 * 1000);
+    expect(rawStartTimeSec).toBe(1618494843);
     expect(result.recentBigLoss?.id).toBe(extendedStatsRaw.最近大铳?.id);
   });
 
@@ -57,7 +69,7 @@ describe('normalizePlayerExtendedStats', () => {
 });
 
 describe('normalizePlayerStats', () => {
-  // T2 (count 改名 / gameCount, latest_timestamp → lastPlayedAt は search_player 側だが
+  // T2 (count 改名 / gameCount, latest_timestamp → lastPlayedAtMs は search_player 側だが
   //     PlayerStats.count → gameCount の改名はここで検証する)
   it('count が gameCount に改名され、公開型に count フィールドが残らない', () => {
     const result = normalizePlayerStats(playerStatsRaw);
@@ -70,13 +82,15 @@ describe('normalizePlayerStats', () => {
 });
 
 describe('normalizePlayerSearchResult', () => {
-  // T2 (秒単位 latest_timestamp → Date 化)
-  it('latest_timestamp（秒）が lastPlayedAt（Date）に正しく変換される', () => {
+  // T2 (秒単位 latest_timestamp → ミリ秒 number 化)
+  it('latest_timestamp（秒）が lastPlayedAtMs（ミリ秒 number）に正しく変換される', () => {
     const [raw] = searchPlayerRaw;
+    expect(raw.latest_timestamp).toBe(1618494843);
     const result = normalizePlayerSearchResult(raw);
 
-    expect(result.lastPlayedAt).toBeInstanceOf(Date);
-    expect(result.lastPlayedAt.getTime()).toBe(raw.latest_timestamp * 1000);
+    expect(typeof result.lastPlayedAtMs).toBe('number');
+    // 期待値は実装の式をコピーせず、フィクスチャの実測値から独立に計算する（設計書 §1.3 C）
+    expect(result.lastPlayedAtMs).toBe(1618494843 * 1000);
     expect(result.id).toBe(raw.id);
     expect(result.nickname).toBe(raw.nickname);
   });
@@ -109,6 +123,55 @@ describe('公開結果の不変性（PR #22 再レビュー指摘2: キャッシ
 
     expect(() => {
       result.recentBigLoss?.fans.push({ id: 0, label: 'x', count: 0, 役满: 0 });
+    }).toThrow(TypeError);
+  });
+
+  // 検収担当の追加指摘: normalizePlayerSearchResult / normalizeGlobalStatistics /
+  // normalizeGlobalStatisticsEntry の deepFreeze を外しても、これまでの9件のテストでは
+  // 何も落ちなかった（searchPlayer / getGlobalStatistics 経路の穴）。
+  it('normalizePlayerSearchResult の結果はネストした level まで再帰的に凍結されている', () => {
+    const [raw] = searchPlayerRaw;
+    const result = normalizePlayerSearchResult(raw);
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.level)).toBe(true);
+
+    expect(() => {
+      (result as unknown as Record<string, unknown>).nickname = 'x';
+    }).toThrow(TypeError);
+    expect(() => {
+      result.level.score = 9999;
+    }).toThrow(TypeError);
+  });
+
+  it('normalizeGlobalStatistics の結果は levelId マップ・entry・basic・rank_rates・extended までネストして凍結されている', () => {
+    const result = normalizeGlobalStatistics(globalStatistics2Raw, '16');
+    const levelIds = Object.keys(result);
+    expect(levelIds.length).toBeGreaterThan(0);
+    const [levelId] = levelIds;
+    const entry = result[levelId];
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(entry)).toBe(true);
+    expect(Object.isFrozen(entry.basic)).toBe(true);
+    expect(Object.isFrozen(entry.basic.rank_rates)).toBe(true);
+    expect(Object.isFrozen(entry.extended)).toBe(true);
+
+    // トップレベルのマップ自体（levelId キーの差し替え）
+    expect(() => {
+      (result as unknown as Record<string, unknown>)[levelId] = null;
+    }).toThrow(TypeError);
+    // entry 直下（normalizeGlobalStatisticsEntry が組み立てるオブジェクト自体）
+    expect(() => {
+      (entry as unknown as Record<string, unknown>).basic = {};
+    }).toThrow(TypeError);
+    // entry.basic のネストした配列要素
+    expect(() => {
+      entry.basic.rank_rates[0] = 999;
+    }).toThrow(TypeError);
+    // entry.extended（normalizePlayerExtendedStats 側の結果）
+    expect(() => {
+      (entry.extended as unknown as Record<string, unknown>).roundCount = 999;
     }).toThrow(TypeError);
   });
 });
