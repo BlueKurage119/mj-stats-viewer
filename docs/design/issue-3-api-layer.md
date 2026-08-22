@@ -103,7 +103,7 @@ src/api/
   mirrors.ts        ミラーリスト・選択状態・localStorage 永続化
   client.ts         fetch 核（タイムアウト・フォールバック・キャッシュ・特殊レスポンス）
   types.ts          ワイヤ型（Raw*）と公開型
-  normalize.ts      Raw → 公開型変換（?? 0 補完・count 改名・Date 化）
+  normalize.ts      Raw → 公開型変換（?? 0 補完・count 改名・秒→ミリ秒 number 化）
   endpoints.ts      公開6関数 + getCurrentLevel
   range.ts          期間解決（RangeSpec / RangeResolver）
   freeze.ts         deepFreeze（公開結果は不変である契約。§5.2。再レビュー指摘で追加）
@@ -142,7 +142,7 @@ export function joinModes(modes: readonly GameMode[]): string;
 - **公開型**: `normalize.ts` で変換して返す。変換内容は次の3点だけ（それ以外のキー名は中国語キー含めワイヤのまま維持。対訳・表示名は Issue 4 以降の責務）:
   1. **`count` の改名**（§4.2）
   2. **回数系キーの `?? 0` 補完**（§4.4）
-  3. **秒単位時刻の `Date` 化**（§4.3）
+  3. **秒単位時刻のミリ秒 number 化**（`Ms` サフィックス。§4.3。Issue 23 §1.2で Date から変更）
 
 ### 4.2 `count` の二重の意味 → 正規化で名前を分ける
 
@@ -160,7 +160,7 @@ export function joinModes(modes: readonly GameMode[]): string;
 - **公開関数の期間引数は `Date` 型のみ**受け取り、内部で `.getTime()` して URL パス（ミリ秒）に埋める。number を直接受けないため「秒を渡してしまう」事故が型レベルで起きない。**引数側はこの Issue 23 改訂の対象外**（共有インスタンスではなく呼び出しごとに消費側が用意するため、`Date` を書き換えられても他の呼び出しに影響しない。`getTime()` を強制する型の利点もそのまま活きる）
 - **レスポンス内の秒単位時刻は正規化でミリ秒の number に変換**し、フィールド名に `Ms` サフィックスを付けて改名する（`latest_timestamp`(秒) → `lastPlayedAtMs: number`、`最近大铳.start_time`(秒) → `recentBigLoss.startedAtMs: number`）
 - **「引数は `Date`・出力は number」という非対称性は意図的**。公開結果はキャッシュ経由で共有され `Object.freeze` で不変性を保証する必要があるため `Date` を置けないが、引数は呼び出しごとの使い捨てであり `Date` のままで安全かつ「秒を渡してしまう」事故防止の利点を保てる
-- branded type（`TimestampMs` 等）は、公開面から生 number が消える本方式では防御が二重になるだけなので**不採用**（過剰設計の回避）
+- branded type（`TimestampMs` 等）は**不採用**。【Issue 23 改訂】公開面に生 number（`lastPlayedAtMs` / `startedAtMs`）が載るようになった今も、単位はフィールド名の `Ms` サフィックスで明示されており、公開面に単位の異なる number が混在することはない。branded type は同じ問題への二重の防御になるだけなので過剰設計として不採用のままとする
 - 内部（client.ts / range.ts）では `startMs` / `endMs` のように**必ず単位サフィックス付きの変数名**を使う
 
 ### 4.4 公開型定義

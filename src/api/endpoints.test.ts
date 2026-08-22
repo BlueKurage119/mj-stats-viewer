@@ -426,3 +426,62 @@ describe('公開7経路の戻り値に freeze で守れない組み込み型が�
     expect(() => assertNoUnfreezableBuiltins(result, 'getCurrentLevel()')).not.toThrow();
   });
 });
+
+describe('公開結果の不変性 — searchPlayer / getGlobalStatistics（検収担当が指摘した追加の穴）', () => {
+  it('searchPlayer: 各要素・level はネストして凍結されるが、外側配列は意図的に非凍結（.sort() を許すため）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, searchPlayerRaw));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await searchPlayer(4, 'freeze-check-search');
+
+    expect(result.length).toBeGreaterThan(0);
+    // 外側配列は searchPlayer が呼び出しごとに .map() で新規生成するため、キャッシュとは
+    // 共有されない。よって意図的に凍結しない（呼び出し側の .sort() を許容する設計）。
+    expect(Object.isFrozen(result)).toBe(false);
+    expect(() => {
+      result.sort((a, b) => a.id - b.id);
+    }).not.toThrow();
+
+    // 一方、各要素そのもの・そのネスト（normalizePlayerSearchResult の戻り値）は
+    // キャッシュされた Promise の解決値の一部を共有しているため凍結されているべき。
+    expect(Object.isFrozen(result[0])).toBe(true);
+    expect(Object.isFrozen(result[0].level)).toBe(true);
+
+    expect(() => {
+      (result[0] as unknown as Record<string, unknown>).nickname = 'x';
+    }).toThrow(TypeError);
+    expect(() => {
+      result[0].level.score = 9999;
+    }).toThrow(TypeError);
+  });
+
+  it('getGlobalStatistics: levelId マップ・entry・basic・rank_rates・extended までネストして凍結されている', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, globalStatistics2Raw));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getGlobalStatistics(4, [16]);
+    const levelIds = Object.keys(result);
+    expect(levelIds.length).toBeGreaterThan(0);
+    const [levelId] = levelIds;
+    const entry = result[levelId];
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(entry)).toBe(true);
+    expect(Object.isFrozen(entry.basic)).toBe(true);
+    expect(Object.isFrozen(entry.basic.rank_rates)).toBe(true);
+    expect(Object.isFrozen(entry.extended)).toBe(true);
+
+    expect(() => {
+      (result as unknown as Record<string, unknown>)[levelId] = null;
+    }).toThrow(TypeError);
+    expect(() => {
+      (entry as unknown as Record<string, unknown>).basic = {};
+    }).toThrow(TypeError);
+    expect(() => {
+      entry.basic.rank_rates[0] = 999;
+    }).toThrow(TypeError);
+    expect(() => {
+      (entry.extended as unknown as Record<string, unknown>).roundCount = 999;
+    }).toThrow(TypeError);
+  });
+});
