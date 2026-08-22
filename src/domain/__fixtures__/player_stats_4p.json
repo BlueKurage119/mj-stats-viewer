@@ -1,0 +1,12 @@
+{
+  "id": 123456790,
+  "nickname": "テストプレイヤー4",
+  "gameCount": 1200,
+  "level": { "id": 10501, "score": 700, "delta": 100 },
+  "max_level": { "id": 10501, "score": 1500, "delta": 0 },
+  "rank_rates": [0.26, 0.25, 0.25, 0.24],
+  "rank_avg_score": [42000, 27000, 21000, 10000],
+  "avg_rank": 2.47,
+  "negative_rate": 0.07,
+  "played_modes": [16]
+}
