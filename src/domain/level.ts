@@ -36,11 +36,15 @@ export function isKonten(level: Level): boolean {
   return level.majorRank >= 6;
 }
 
-/** 本家 isSame。魂天は 6 と 7 を同一視する */
+/**
+ * 本家 isSame（level.ts:74-81）。両者が魂天 かつ どちらかの majorRank が6（旧魂天）なら
+ * minorRank を見ずに true を返す（旧魂天は現行魂天のどの minorRank とも同一視される）。
+ * それ以外は numPlayerId・majorRank・minorRank の完全一致。
+ */
 export function isSameLevel(a: Level, b: Level): boolean {
-  if (a.numPlayerId !== b.numPlayerId || a.minorRank !== b.minorRank) return false;
-  if (a.majorRank === b.majorRank) return true;
-  return isKonten(a) && isKonten(b);
+  if (a.numPlayerId !== b.numPlayerId) return false;
+  if (isKonten(a) && isKonten(b) && (a.majorRank === 6 || b.majorRank === 6)) return true;
+  return a.majorRank === b.majorRank && a.minorRank === b.minorRank;
 }
 
 export function isAllowedMode(level: Level, mode: GameMode): boolean {
@@ -152,23 +156,50 @@ export function getScoreDisplay(level: Level, score: number): string {
   return String(score);
 }
 
-/** '232/1400' 形式。上限0のときは数値のみ。段位が変わる場合は新段位の初期ポイントを表示する */
+/**
+ * '232/1400' 形式。上限0のときは数値のみ。段位が変わる場合は新段位の初期ポイントを表示する。
+ * 本家 formatAdjustedScore（level.ts:194-200）逐語移植。getScoreDisplay を分子・分母の
+ * 両方に適用する（魂天では分母も /100 の小数1桁表示になる。例: 2000 → '20.0'）。
+ * score は「渡された level のスケールで既に評価可能な値」であること（majorRank 6 の
+ * 生スコアをそのまま渡さない。version 補正は呼び出し側の責務 — formatLevelWithDelta 参照）。
+ */
 export function formatAdjustedScore(level: Level, score: number): string {
-  const adjusted = getAdjustedLevel(level, score);
-  const displayScore = isSameLevel(adjusted, level) ? score : getStartingPoint(adjusted);
-  const maxPoint = getMaxPoint(adjusted);
-  const scoreText = getScoreDisplay(adjusted, displayScore);
-  return maxPoint ? `${scoreText}/${maxPoint}` : scoreText;
+  let displayLevel = level;
+  let displayScore = score;
+  const maxPoint = getMaxPoint(level);
+  if (maxPoint && score >= maxPoint) {
+    displayLevel = getNextLevel(level);
+    displayScore = getStartingPoint(displayLevel);
+  } else if (score < 0) {
+    const cannotDemote = !maxPoint || level.majorRank === 1 || (level.majorRank === 2 && level.minorRank === 1);
+    if (cannotDemote) {
+      displayScore = Math.max(score, 0);
+    } else {
+      displayLevel = getPreviousLevel(level);
+      displayScore = getStartingPoint(displayLevel);
+    }
+  }
+  const newMax = getMaxPoint(displayLevel);
+  const scoreText = getScoreDisplay(displayLevel, displayScore);
+  if (!newMax) return scoreText;
+  return `${scoreText}/${getScoreDisplay(displayLevel, newMax)}`;
 }
 
 export function currentPoint(lv: LevelWithDelta): number {
   return lv.score + lv.delta;
 }
 
-/** '雀傑2 232/1400' 形式 */
+/**
+ * '雀傑2 232/1400' 形式。
+ * 分子（現在pt）は getVersionAdjustedScore 相当の変換をかけてから formatAdjustedScore に
+ * 渡す（majorRank 6 の生スコアをそのまま渡すと、majorRank 7 スケールの上限pt と誤って
+ * 比較され不正な昇段判定を起こすため）。
+ */
 export function formatLevelWithDelta(lv: LevelWithDelta): string {
   const level = parseLevelId(lv.id);
   const point = currentPoint(lv);
+  const adjustedLevel = getVersionAdjustedLevel(level);
+  const adjustedPoint = getVersionAdjustedScore(level, point);
   const adjusted = getAdjustedLevel(level, point);
-  return `${getLevelTag(adjusted)} ${formatAdjustedScore(level, point)}`;
+  return `${getLevelTag(adjusted)} ${formatAdjustedScore(adjustedLevel, adjustedPoint)}`;
 }

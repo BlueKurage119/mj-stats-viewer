@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatAdjustedScore,
   formatLevelWithDelta,
   getLevelTagFromId,
   getMaxPoint,
@@ -8,6 +9,7 @@ import {
   getPreviousLevel,
   getScoreDisplay,
   isAllowedMode,
+  isSameLevel,
   parseLevelId,
   toLevelId,
 } from './level';
@@ -76,5 +78,36 @@ describe('level: 入室可否', () => {
   it('雀豪は王座に入れないが玉には入れる', () => {
     expect(isAllowedMode(parseLevelId(10401), 16)).toBe(false);
     expect(isAllowedMode(parseLevelId(10401), 12)).toBe(true);
+  });
+});
+
+describe('level: formatAdjustedScore（差し戻し修正）', () => {
+  it('魂天は分母も /100 の小数1桁表示になる（分子だけでなく分母も getScoreDisplay を適用）', () => {
+    expect(formatAdjustedScore(parseLevelId(10701), 890)).toBe('8.9/20.0');
+  });
+});
+
+describe('level: formatLevelWithDelta（差し戻し修正）', () => {
+  it('旧魂天(majorRank6)は分子に getVersionAdjustedScore 相当の変換をかけてから渡す', () => {
+    expect(formatLevelWithDelta({ id: 10601, score: 6871, delta: 0 })).toBe('魂天1 8.9/20.0');
+  });
+
+  it('降段できない段位でスコアが負になったら 0 に丸める（負のまま表示しない）', () => {
+    expect(formatLevelWithDelta({ id: 10101, score: 10, delta: -50 })).toBe('初心1 0/20');
+  });
+});
+
+describe('level: isSameLevel（差し戻し修正）', () => {
+  it('両者が魂天でどちらかの majorRank が6なら minorRank を見ずに true', () => {
+    expect(isSameLevel(parseLevelId(10605), parseLevelId(10701))).toBe(true);
+  });
+
+  it('現行魂天同士は minorRank まで一致しないと false', () => {
+    expect(isSameLevel(parseLevelId(10701), parseLevelId(10702))).toBe(false);
+  });
+
+  it('非魂天は majorRank・minorRank の完全一致が必要', () => {
+    expect(isSameLevel(parseLevelId(10501), parseLevelId(10502))).toBe(false);
+    expect(isSameLevel(parseLevelId(10501), parseLevelId(10501))).toBe(true);
   });
 });
