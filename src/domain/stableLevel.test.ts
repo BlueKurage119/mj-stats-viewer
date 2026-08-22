@@ -29,6 +29,36 @@ describe('stableLevel: estimateStableLevel2（玉/王座）', () => {
   });
 });
 
+describe('stableLevel: estimateStableLevel2 は入力を実効段位に正規化する', () => {
+  // levelId 10503（雀聖3・上限9000）だが score+delta=9010 は境界を跨いでおり実効段位は魂天1。
+  // input.levelId をそのまま雀聖3として扱うと現行魂天への昇段を見落とす（バグ）。
+  it('境界を跨いだ入力は魂天として判定される', () => {
+    const input: StableLevelInput = {
+      levelId: 10503,
+      score: 8990,
+      delta: 20,
+      rankRates: [0.26, 0.25, 0.25, 0.24],
+      rankAvgScores: [42000, 27000, 21000, 10000],
+    };
+    const result = estimateStableLevel2(input, 16);
+    expect(result).toEqual({ kind: 'konten', levelId: 10701, expectedPoint: 1 });
+  });
+});
+
+describe('stableLevel: estimateStableLevel も入力を実効段位に正規化する', () => {
+  it('境界を跨いだ入力は魂天として判定される', () => {
+    const input: StableLevelInput = {
+      levelId: 10503,
+      score: 8990,
+      delta: 20,
+      rankRates: [0.26, 0.25, 0.25, 0.24],
+      rankAvgScores: [42000, 27000, 21000, 10000],
+    };
+    const result = estimateStableLevel(input, 16);
+    expect(result).toEqual({ kind: 'konten', levelId: 10701, expectedPoint: 1 });
+  });
+});
+
 describe('stableLevel: splitStableLevelNumber', () => {
   it('4未満は雀豪。切り捨てであること', () => {
     expect(splitStableLevelNumber(3.00555)).toEqual({ majorRank: 4, value: 3.00555, text: '雀豪3.00' });

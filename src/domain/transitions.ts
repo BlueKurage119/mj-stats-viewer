@@ -10,7 +10,7 @@
 import type { GameMode } from '../api';
 import type { LevelWithDelta } from '../api';
 import { calculateDeltaPoint } from './points';
-import { currentPoint, getMaxPoint, parseLevelId, isKonten } from './level';
+import { currentPoint, getMaxPoint, getVersionAdjustedScore, parseLevelId, isKonten } from './level';
 import { KONTEN_DELTA, numPlayersForMode } from './levelConstants';
 
 export type RankCondition =
@@ -64,7 +64,7 @@ export function promotionConditions(lv: LevelWithDelta, mode: GameMode): RankCon
   const maxPoint = getMaxPoint(level);
   if (maxPoint === 0) return allNever(n); // 上限が無い＝これ以上昇段する先が無い
 
-  const point = currentPoint(lv);
+  const point = getVersionAdjustedScore(level, currentPoint(lv));
   const needed = maxPoint - point;
   const total = totalFor(mode);
 
@@ -94,7 +94,7 @@ export function demotionConditions(lv: LevelWithDelta, mode: GameMode): RankCond
   const cannotDemote = maxPoint === 0 || level.majorRank === 1 || (level.majorRank === 2 && level.minorRank === 1);
   if (cannotDemote) return allNever(n);
 
-  const point = currentPoint(lv);
+  const point = getVersionAdjustedScore(level, currentPoint(lv));
   const total = totalFor(mode);
 
   const results: RankCondition[] = [];

@@ -5,7 +5,7 @@
 
 import type { GameMode } from '../api';
 import { expectedPointPerGame } from './points';
-import { getNextLevel, getPreviousLevel, isAllowedMode, isKonten, parseLevelId, toLevelId, type Level } from './level';
+import { getAdjustedLevel, getNextLevel, getPreviousLevel, isAllowedMode, isKonten, parseLevelId, toLevelId, type Level } from './level';
 import { KONTEN_DELTA } from './levelConstants';
 
 export type StableLevel =
@@ -39,7 +39,7 @@ export function estimateStableLevel2(input: StableLevelInput, mode: GameMode): S
   const lastRate = input.rankRates[input.rankRates.length - 1];
   if (!lastRate) return { kind: 'unavailable' };
 
-  const level = parseLevelId(input.levelId);
+  const level = getAdjustedLevel(parseLevelId(input.levelId), input.score + input.delta);
   const kontenDelta = KONTEN_DELTA[mode];
   let E = expectedAt(input, mode, level, false);
 
@@ -64,7 +64,7 @@ export function estimateStableLevel2(input: StableLevelInput, mode: GameMode): S
 }
 
 export function estimateStableLevel(input: StableLevelInput, mode: GameMode): StableLevel {
-  let level = parseLevelId(input.levelId);
+  let level = getAdjustedLevel(parseLevelId(input.levelId), input.score + input.delta);
   let lastPositive: Level | null = null;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
