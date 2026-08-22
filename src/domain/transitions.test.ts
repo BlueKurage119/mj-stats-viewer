@@ -73,6 +73,22 @@ describe('transitions: 魂天は always/never のみ', () => {
   });
 });
 
+describe('transitions: 旧魂天（majorRank 6）はバージョン補正後のptで判定する', () => {
+  // score=6871 は旧スケール。補正後 ceil(6871/100)*10+200 = 890（上限2000・残1110pt）。
+  // 生スコアのまま比較すると needed = 2000-6871 = -4871 になり全て always に化ける（バグ）。
+  const lv = { id: 10601, score: 6871, delta: 0 };
+
+  it('promotionConditions は全て never（残1110ptに対し最大delta 50は届かない）', () => {
+    const conditions = promotionConditions(lv, 16);
+    expect(conditions).toEqual([
+      { rank: 0, kind: 'never' },
+      { rank: 1, kind: 'never' },
+      { rank: 2, kind: 'never' },
+      { rank: 3, kind: 'never' },
+    ]);
+  });
+});
+
 describe('transitions: 上限0の魂天20', () => {
   const lv = { id: 10720, score: 0, delta: 0 };
 
