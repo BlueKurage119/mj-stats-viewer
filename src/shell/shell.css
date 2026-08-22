@@ -1,0 +1,213 @@
+:root {
+  --app-header-height: 64px;
+}
+
+.shell-container {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--app-header-height, 64px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.app-header__title {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+}
+
+.app-header__title:hover {
+  text-decoration: underline;
+}
+
+.nav-rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  padding-top: var(--app-header-height, 64px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--md-sys-color-surface);
+  z-index: 2;
+}
+
+.nav-rail__item {
+  position: relative;
+  width: 100%;
+  min-height: 56px;
+  margin: 4px 0;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.nav-rail__item:focus-visible {
+  outline: 2px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+
+.nav-rail__item[aria-current="page"] {
+  color: var(--md-sys-color-on-surface);
+}
+
+.nav-rail__pill {
+  width: 56px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.nav-rail__item[aria-current="page"] .nav-rail__pill {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.nav-rail__item:not([aria-current="page"]) .nav-rail__pill {
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.nav-rail__label {
+  margin-top: 4px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+}
+
+.layered-sheet {
+  position: relative;
+  flex: 1;
+}
+
+.layered-sheet__hero {
+  position: sticky;
+  top: var(--app-header-height, 64px);
+  z-index: 0;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  min-height: 180px;
+  padding: 24px 16px 48px;
+  box-sizing: border-box;
+}
+
+.layered-sheet__layer {
+  position: relative;
+  z-index: 1;
+  margin-top: -28px;
+  border-radius: 28px 28px 0 0;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  min-height: 100svh;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  padding-bottom: calc(80px + 16px + env(safe-area-inset-bottom, 0px));
+  /* タブ遷移アニメーション(translateX)がページの水平スクロール幅を一瞬超え、
+     スクロールバー出現→固定ナビの再レイアウトを引き起こすため水平方向のみ clip する */
+  overflow-x: hidden;
+}
+
+.tab-transition[data-direction="1"] {
+  animation: shared-axis-in-forward 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+.tab-transition[data-direction="-1"] {
+  animation: shared-axis-in-backward 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+.tab-transition[data-direction="0"] {
+  animation: shared-axis-in-fade 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+@keyframes shared-axis-in-forward {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shared-axis-in-backward {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shared-axis-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-transition {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 839px) {
+  .nav-rail {
+    display: none;
+  }
+  .bottom-nav {
+    display: block;
+  }
+}
+
+@media (min-width: 840px) {
+  .nav-rail {
+    display: flex;
+  }
+  .bottom-nav {
+    display: none;
+  }
+  .shell-container {
+    padding-left: 80px;
+  }
+  .layered-sheet__layer {
+    padding-bottom: 24px;
+  }
+}
