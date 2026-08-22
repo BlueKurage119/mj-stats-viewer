@@ -134,6 +134,9 @@
   padding: 24px 16px;
   box-sizing: border-box;
   padding-bottom: calc(80px + 16px + env(safe-area-inset-bottom, 0px));
+  /* タブ遷移アニメーション(translateX)がページの水平スクロール幅を一瞬超え、
+     スクロールバー出現→固定ナビの再レイアウトを引き起こすため水平方向のみ clip する */
+  overflow-x: hidden;
 }
 
 .tab-transition[data-direction="1"] {
