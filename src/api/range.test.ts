@@ -24,7 +24,7 @@ describe('resolveRange — preset (T11)', () => {
 
     const { start, end } = await resolveRange({ kind: 'preset', preset: '7d' }, 4, 123456789);
 
-    expect(end.getTime() - start.getTime()).toBe(8 * 24 * 3_600_000);
+    expect(end.getTime() - start.getTime()).toBe(7 * 24 * 3_600_000);
   });
 
   it('end は1時間の間 URL 安定になる（同一時間内で複数回呼んでも end が変わらない）', async () => {
