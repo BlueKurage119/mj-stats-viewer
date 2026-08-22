@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { HomePlaceholder } from './HomePlaceholder';
+import { SearchPage } from '../search/SearchPage';
 import { PlaceholderPanel } from './PlaceholderPanel';
 import { PlayerLayout } from './PlayerLayout';
 import { VISIBLE_TABS } from './paths';
@@ -9,7 +9,7 @@ export function AppRouter(): ReactElement {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<HomePlaceholder />} />
+        <Route path="/" element={<SearchPage />} />
         <Route path="/:np/player/:id" element={<PlayerLayout />}>
           <Route index element={<Navigate to="summary" replace />} />
           {VISIBLE_TABS.map((tab) => (
