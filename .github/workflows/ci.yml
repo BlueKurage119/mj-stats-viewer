@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: lint / typecheck / build / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # フラグなしで通ることが Issue #26 の完了条件。
+      # --legacy-peer-deps 等を足すと #3 の回帰を検出できなくなる。
+      - name: Install
+        id: install
+        run: npm ci
+
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
+
+      - name: Typecheck + build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
+
+      - name: Test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test
