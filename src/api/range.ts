@@ -91,3 +91,5 @@ export function resolveRange(
 export function setRangeResolver(resolver: RangeResolver): void {
   currentResolver = resolver;
 }
+
+export const __ciProbe: number = 'x';
