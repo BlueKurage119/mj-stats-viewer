@@ -72,6 +72,7 @@
   color: var(--md-sys-color-on-surface);
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
   font-family: inherit;
   overflow: hidden;
 }

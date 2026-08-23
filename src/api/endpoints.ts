@@ -47,13 +47,14 @@ export async function searchPlayer(
   numPlayers: NumPlayers,
   prefix: string,
   limit = 20,
+  signal?: AbortSignal,
 ): Promise<PlayerSearchResult[]> {
   const trimmed = prefix.trim();
   if (trimmed === '') {
     return [];
   }
   const path = `${apiPrefix(numPlayers)}/search_player/${encodeURIComponent(trimmed)}?limit=${limit}&tag=all`;
-  const raw = await apiGet<RawPlayerSearchResult[]>(path);
+  const raw = await apiGet<RawPlayerSearchResult[]>(path, {}, signal);
   return raw.map(normalizePlayerSearchResult);
 }
 

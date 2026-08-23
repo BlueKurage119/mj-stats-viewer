@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import React, { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { NumPlayers } from '../api';
 import {
   OutlinedSegmentedButton,
@@ -13,19 +13,29 @@ import { crossModeLabel, formatLastPlayedDate, formatLevel } from './format';
 import './search.css';
 import { useSearch } from './useSearch';
 
+/**
+ * 四麻/三麻トグルの並び順を唯一の情報源として定義する。
+ * OutlinedSegmentedButtonSet の selection index はこの配列のインデックスと一致させる
+ * ことで、ボタンの描画順を入れ替えても selection の対応関係が自動的に追従する。
+ */
+const NP_TOGGLE_OPTIONS: readonly { numPlayers: NumPlayers; label: string }[] = [
+  { numPlayers: 4, label: '四人打ち' },
+  { numPlayers: 3, label: '三人打ち' },
+];
+
 export function SearchPage(): ReactElement {
-  const navigate = useNavigate();
   const [numPlayers, setNumPlayers] = useState<NumPlayers>(4);
   const { query, setQuery, state, retry } = useSearch(numPlayers);
 
-  const resultRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const resultRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   const handleNpSelection = (
     e: CustomEvent<{ selected: boolean; index: number }>,
   ) => {
-    const index = e.detail.index;
-    const nextNp: NumPlayers = index === 0 ? 4 : 3;
-    setNumPlayers(nextNp);
+    const option = NP_TOGGLE_OPTIONS[e.detail.index];
+    if (option) {
+      setNumPlayers(option.numPlayers);
+    }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
@@ -57,16 +67,6 @@ export function SearchPage(): ReactElement {
     }
   };
 
-  const handleSelectPlayer = (id: number) => {
-    navigate(
-      playerPath({
-        numPlayers,
-        playerId: String(id),
-        tab: 'summary',
-      }),
-    );
-  };
-
   let statusContent: React.ReactNode = null;
   let resultsList: React.ReactNode = null;
 
@@ -92,15 +92,18 @@ export function SearchPage(): ReactElement {
             const mode = crossModeLabel(item.level.id, numPlayers);
             return (
               <li key={item.id}>
-                <button
-                  type="button"
+                <Link
+                  to={playerPath({
+                    numPlayers,
+                    playerId: String(item.id),
+                    tab: 'summary',
+                  })}
                   className="search-result"
                   data-testid="search-result"
                   data-player-id={String(item.id)}
                   ref={(el) => {
                     resultRefs.current[index] = el;
                   }}
-                  onClick={() => handleSelectPlayer(item.id)}
                   onKeyDown={(e) => handleResultKeyDown(e, index)}
                 >
                   <Ripple />
@@ -118,7 +121,7 @@ export function SearchPage(): ReactElement {
                   <span className="search-result__date md-typescale-body-small">
                     {formatLastPlayedDate(item.lastPlayedAtMs)}
                   </span>
-                </button>
+                </Link>
               </li>
             );
           })}
@@ -151,14 +154,13 @@ export function SearchPage(): ReactElement {
           data-testid="search-np-toggle"
           onSegmentedButtonSetSelection={handleNpSelection}
         >
-          <OutlinedSegmentedButton
-            label="四人打ち"
-            selected={numPlayers === 4}
-          />
-          <OutlinedSegmentedButton
-            label="三人打ち"
-            selected={numPlayers === 3}
-          />
+          {NP_TOGGLE_OPTIONS.map((option) => (
+            <OutlinedSegmentedButton
+              key={option.numPlayers}
+              label={option.label}
+              selected={numPlayers === option.numPlayers}
+            />
+          ))}
         </OutlinedSegmentedButtonSet>
       </header>
 

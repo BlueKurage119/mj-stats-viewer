@@ -63,10 +63,11 @@ export function useSearch(numPlayers: NumPlayers, delayMs = 300): UseSearch {
     }
 
     let cancelled = false;
+    const controller = new AbortController();
     // oxlint-disable-next-line react/set-state-in-effect
     setState({ kind: 'loading' });
 
-    searchPlayer(numPlayers, debouncedQuery)
+    searchPlayer(numPlayers, debouncedQuery, undefined, controller.signal)
       .then((items) => {
         if (!cancelled) {
           setState({ kind: 'results', items });
@@ -80,6 +81,7 @@ export function useSearch(numPlayers: NumPlayers, delayMs = 300): UseSearch {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [debouncedQuery, numPlayers, retryNonce]);
 

@@ -25,13 +25,20 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+  externalSignal?: AbortSignal,
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const onExternalAbort = () => controller.abort();
+  externalSignal?.addEventListener('abort', onExternalAbort);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -104,7 +111,11 @@ async function handleResponse<T>(
  * 中に選択インデックスを書き換え合い、「唯一生きているミラーを飛ばして全滅と誤判定する」
  * 事故が起きるため（同時に発行される player_stats / player_extended_stats の2本で実際に踏む）。
  */
-async function fetchWithFallback<T>(path: string, opts: ApiGetOptions): Promise<T> {
+async function fetchWithFallback<T>(
+  path: string,
+  opts: ApiGetOptions,
+  signal?: AbortSignal,
+): Promise<T> {
   let lastError: unknown;
   const startIndex = getSelectedMirrorIndex();
   for (let i = 0; i < MIRRORS.length; i++) {
@@ -112,8 +123,13 @@ async function fetchWithFallback<T>(path: string, opts: ApiGetOptions): Promise<
     const mirror = MIRRORS[mirrorIndex];
     let response: Response;
     try {
-      response = await fetchWithTimeout(`${mirror}/${path}`);
+      response = await fetchWithTimeout(`${mirror}/${path}`, undefined, signal);
     } catch (err) {
+      // 呼び出し元による意図的な中断は「このミラーが失敗した」ではないため、
+      // 他ミラーへフォールバックせず即座に伝播する
+      if (signal?.aborted) {
+        throw err;
+      }
       lastError = err;
       continue;
     }
@@ -128,14 +144,19 @@ async function fetchWithFallback<T>(path: string, opts: ApiGetOptions): Promise<
 /**
  * API層の唯一の fetch エントリポイント。同一 path への同時呼び出しは1リクエストに合流する。
  * 失敗した Promise はキャッシュから削除する（失敗をキャッシュしない）。
+ *
+ * signal は「呼び出し元がもう結果を必要としなくなった」ときの通知にのみ使う（例: 検索の
+ * デバウンス確定値が変わった／人数トグルが切り替わった）。同一 path への同時呼び出しは
+ * 上記のとおり1つの Promise に合流するため、signal を渡した呼び出しが唯一の待機者とは
+ * 限らない点に注意（現状の呼び出し元はいずれも path が呼び出しごとに一意になるため安全）。
  */
-export function apiGet<T>(path: string, opts: ApiGetOptions = {}): Promise<T> {
+export function apiGet<T>(path: string, opts: ApiGetOptions = {}, signal?: AbortSignal): Promise<T> {
   const cached = cache.get(path);
   if (cached) {
     return cached as Promise<T>;
   }
 
-  const promise = fetchWithFallback<T>(path, opts).catch((err: unknown) => {
+  const promise = fetchWithFallback<T>(path, opts, signal).catch((err: unknown) => {
     cache.delete(path);
     throw err;
   });
