@@ -6,6 +6,7 @@ import {
   VISIBLE_TABS,
   PLAYER_TABS,
   isNumPlayersParam,
+  parsePlayerId,
 } from './paths';
 
 describe('paths', () => {
@@ -63,5 +64,14 @@ describe('paths', () => {
       id: '123',
       tab: 'stats',
     });
+  });
+
+  it('B14: parsePlayerId parses non-negative integers and returns null for invalid inputs', () => {
+    expect(parsePlayerId('123456')).toBe(123456);
+    expect(parsePlayerId('abc')).toBeNull();
+    expect(parsePlayerId('-1')).toBeNull();
+    expect(parsePlayerId('')).toBeNull();
+    expect(parsePlayerId(undefined)).toBeNull();
+    expect(parsePlayerId('1.5')).toBeNull();
   });
 });

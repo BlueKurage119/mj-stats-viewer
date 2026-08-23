@@ -51,3 +51,12 @@ export function visibleTabIndex(tab: PlayerTab | undefined): number {
   const index = VISIBLE_TABS.findIndex((t) => t.id === tab);
   return index >= 0 ? index : 0;
 }
+
+/** ルートの :id を数値 playerId へ。10進の非負整数でなければ null */
+export function parsePlayerId(raw: string | undefined): number | null {
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    return null;
+  }
+  const parsed = parseInt(raw, 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
