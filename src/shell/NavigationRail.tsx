@@ -26,7 +26,9 @@ export function NavigationRail(props: PlayerNavProps): ReactElement {
 
         const handleClick = () => {
           if (location.pathname !== targetPath) {
-            navigate(targetPath);
+            // タブ切替は numPlayers / playerId を変えないため、グローバル
+            // フィルタ（?mode&period）はそのまま持ち越す
+            navigate({ pathname: targetPath, search: location.search });
           }
         };
 
