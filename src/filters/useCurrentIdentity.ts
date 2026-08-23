@@ -18,10 +18,11 @@ export function useCurrentIdentity(numPlayers: NumPlayers, playerId: number): Cu
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     // oxlint-disable-next-line react/set-state-in-effect
     setState({ kind: 'loading' });
 
-    getCurrentLevel(numPlayers, playerId)
+    getCurrentLevel(numPlayers, playerId, controller.signal)
       .then((res) => {
         if (!cancelled) {
           if (res === null) {
@@ -39,6 +40,7 @@ export function useCurrentIdentity(numPlayers: NumPlayers, playerId: number): Cu
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [numPlayers, playerId]);
 

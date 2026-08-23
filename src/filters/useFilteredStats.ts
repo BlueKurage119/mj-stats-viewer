@@ -65,6 +65,7 @@ export function useFilteredStats(
     }
 
     let cancelled = false;
+    const controller = new AbortController();
     // oxlint-disable-next-line react/set-state-in-effect
     setState({ kind: 'loading' });
 
@@ -78,8 +79,22 @@ export function useFilteredStats(
         if (cancelled) return;
 
         const [stats, extended] = await Promise.all([
-          getPlayerStats(numPlayers, playerId, range.start, range.end, debouncedFilter.modes),
-          getPlayerExtendedStats(numPlayers, playerId, range.start, range.end, debouncedFilter.modes),
+          getPlayerStats(
+            numPlayers,
+            playerId,
+            range.start,
+            range.end,
+            debouncedFilter.modes,
+            controller.signal,
+          ),
+          getPlayerExtendedStats(
+            numPlayers,
+            playerId,
+            range.start,
+            range.end,
+            debouncedFilter.modes,
+            controller.signal,
+          ),
         ]);
         if (cancelled) return;
 
@@ -99,6 +114,7 @@ export function useFilteredStats(
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [debouncedFilter, numPlayers, playerId]);
 
