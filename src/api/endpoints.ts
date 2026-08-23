@@ -64,11 +64,12 @@ export async function getPlayerStats(
   start: Date,
   end: Date,
   modes?: readonly GameMode[],
+  signal?: AbortSignal,
 ): Promise<PlayerStats | null> {
   const path =
     `${apiPrefix(numPlayers)}/player_stats/${playerId}/${start.getTime()}/${end.getTime()}` +
     `?mode=${modeParam(numPlayers, modes)}&tag=${hourTag()}`;
-  const raw = await apiGet<RawPlayerStats | null>(path, { nullOn404: true });
+  const raw = await apiGet<RawPlayerStats | null>(path, { nullOn404: true }, signal);
   return raw ? normalizePlayerStats(raw) : null;
 }
 
@@ -78,11 +79,12 @@ export async function getPlayerExtendedStats(
   start: Date,
   end: Date,
   modes?: readonly GameMode[],
+  signal?: AbortSignal,
 ): Promise<PlayerExtendedStats | null> {
   const path =
     `${apiPrefix(numPlayers)}/player_extended_stats/${playerId}/${start.getTime()}/${end.getTime()}` +
     `?mode=${modeParam(numPlayers, modes)}&tag=${hourTag()}`;
-  const raw = await apiGet<RawPlayerExtendedStats | null>(path, { nullOn404: true });
+  const raw = await apiGet<RawPlayerExtendedStats | null>(path, { nullOn404: true }, signal);
   return raw ? normalizePlayerExtendedStats(raw) : null;
 }
 
@@ -130,8 +132,16 @@ export type CurrentLevelInfo = {
 export async function getCurrentLevel(
   numPlayers: NumPlayers,
   playerId: number,
+  signal?: AbortSignal,
 ): Promise<CurrentLevelInfo | null> {
-  const stats = await getPlayerStats(numPlayers, playerId, dataMinDate(), currentHourEnd(), allModes(numPlayers));
+  const stats = await getPlayerStats(
+    numPlayers,
+    playerId,
+    dataMinDate(),
+    currentHourEnd(),
+    allModes(numPlayers),
+    signal,
+  );
   if (!stats) {
     return null;
   }

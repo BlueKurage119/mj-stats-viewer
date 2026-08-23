@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NumPlayers } from '../api';
 import { searchPlayer } from '../api';
-import { createDebouncer, type Debouncer } from './debounce';
+import { createDebouncer, type Debouncer } from '../util/debounce';
 import { describeError, normalizeQuery, type SearchState } from './searchState';
 
 export interface UseSearch {
