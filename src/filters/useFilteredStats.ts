@@ -38,6 +38,9 @@ export function useFilteredStats(
 
   useEffect(() => {
     if (filterKey === null || filter === null) {
+      // filter が null に戻る（numPlayers/playerId 切替で identity が再解決待ちになる等）のは
+      // 新しい「初回」の始まりなので、次に filter が揃ったときも即時発火させる
+      hasFiredRef.current = false;
       debouncerRef.current?.cancel();
       // oxlint-disable-next-line react/set-state-in-effect
       setDebouncedFilter(null);
