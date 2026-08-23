@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { LayeredSheet } from './LayeredSheet';
@@ -16,7 +16,9 @@ import { useCurrentIdentity } from '../filters/useCurrentIdentity';
 import { useGlobalFilter } from '../filters/useGlobalFilter';
 import { useFilteredStats } from '../filters/useFilteredStats';
 import { FilterBar } from '../filters/FilterBar';
-import { formatLevelWithDelta } from '../domain/level';
+import { IdentityHero } from '../summary/IdentityHero';
+import { useTheme } from '../theme/ThemeProvider';
+import { rankFromLevelId } from '../theme/seeds';
 import type { PlayerScope } from '../filters/playerScope';
 import type { NumPlayers } from '../api';
 import './shell.css';
@@ -80,6 +82,18 @@ function PlayerLayoutInner({
   const { filter, setModes, setPeriod } = useGlobalFilter(numPlayers, identity);
   const stats = useFilteredStats(numPlayers, playerId, filter);
 
+  // Issue 8: 段位が確定したらテーマシードを切り替える（setRank）。
+  // deps に identity.kind と levelId を入れる。loading 中は前の rank を維持する。
+  const { setRank } = useTheme();
+  const levelId = identity.kind === 'ready' ? identity.identity.level.id : undefined;
+  useEffect(() => {
+    if (identity.kind === 'ready' && levelId !== undefined) {
+      setRank(rankFromLevelId(levelId));
+    } else if (identity.kind === 'notFound' || identity.kind === 'error') {
+      setRank(null);
+    }
+  }, [identity.kind, levelId, setRank]);
+
   const scope: PlayerScope = {
     numPlayers,
     playerId,
@@ -90,31 +104,18 @@ function PlayerLayoutInner({
     setPeriod,
   };
 
-  let nicknameDisplay = `プレイヤー: ${rawId}`;
-  let levelDisplay = '読み込み中...';
-
-  if (identity.kind === 'ready') {
-    nicknameDisplay = identity.identity.nickname;
-    levelDisplay = formatLevelWithDelta(identity.identity.level);
-  } else if (identity.kind === 'notFound') {
-    levelDisplay = 'プレイヤーが見つかりませんでした';
-  } else if (identity.kind === 'error') {
-    levelDisplay = identity.message;
-  }
-
   const heroContent = (
-    <div className="player-hero">
-      <div className="md-typescale-headline-small">{nicknameDisplay}</div>
-      <div className="md-typescale-body-medium" data-testid="identity-level">
-        {levelDisplay}
-      </div>
-      <FilterBar
-        numPlayers={numPlayers}
-        filter={filter}
-        onModesChange={setModes}
-        onPeriodChange={setPeriod}
-      />
-    </div>
+    <IdentityHero
+      identity={identity}
+      filterBar={
+        <FilterBar
+          numPlayers={numPlayers}
+          filter={filter}
+          onModesChange={setModes}
+          onPeriodChange={setPeriod}
+        />
+      }
+    />
   );
 
   return (

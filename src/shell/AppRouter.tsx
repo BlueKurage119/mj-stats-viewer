@@ -4,6 +4,7 @@ import { SearchPage } from '../search/SearchPage';
 import { PlaceholderPanel } from './PlaceholderPanel';
 import { PlayerLayout } from './PlayerLayout';
 import { VISIBLE_TABS } from './paths';
+import { SummaryPanel } from '../summary/SummaryPanel';
 
 export function AppRouter(): ReactElement {
   return (
@@ -16,7 +17,13 @@ export function AppRouter(): ReactElement {
             <Route
               key={tab.id}
               path={tab.id}
-              element={<PlaceholderPanel tab={tab.id} />}
+              element={
+                tab.id === 'summary' ? (
+                  <SummaryPanel />
+                ) : (
+                  <PlaceholderPanel tab={tab.id} />
+                )
+              }
             />
           ))}
         </Route>
