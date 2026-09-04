@@ -9,6 +9,7 @@ export {
   formatAdjustedScore,
   formatLevelWithDelta,
   getAdjustedLevel,
+  getLevelMajorTag,
   getLevelTag,
   getLevelTagFromId,
   getMaxPoint,
@@ -30,7 +31,7 @@ export type { DeltaOptions } from './points';
 export { calculateDeltaPoint, expectedPointPerGame, rankDeltaPoints } from './points';
 
 export type { RankCondition } from './transitions';
-export { demotionConditions, promotionConditions } from './transitions';
+export { demotionConditions, promotionConditions, tableTotalScore } from './transitions';
 
 export type { LevelPoint } from './growth';
 export { applyPointDelta, gamesToDemotion, gamesToPromotion, preferredMode, projectAfterGames } from './growth';

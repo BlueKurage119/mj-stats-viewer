@@ -145,6 +145,16 @@ export function getLevelTag(level: Level): string {
   return `${label}${level.minorRank}`;
 }
 
+/**
+ * 段位の主要部ラベル（'初心'|'雀士'|'雀傑'|'雀豪'|'雀聖'|'魂天'）。魂天は majorRank>=6 で '魂天'。
+ * getLevelTag() の戻り値を文字列操作して主要部を取り出すのではなく、idx算出を独立に行う
+ * （設計書 issue-8 §3.2）。
+ */
+export function getLevelMajorTag(level: Level): string {
+  const idx = isKonten(level) ? 5 : level.majorRank - 1;
+  return LEVEL_TAGS_JA[idx];
+}
+
 export function getLevelTagFromId(levelId: number): string {
   return getLevelTag(parseLevelId(levelId));
 }

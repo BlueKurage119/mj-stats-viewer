@@ -21,7 +21,8 @@ export type RankCondition =
 
 const SCORE_STEP = 100;
 
-function totalFor(mode: GameMode): number {
+/** 卓の総素点（四麻 100000 / 三麻 105000）。境界探索の上限であり、UI の到達可能性判定にも使う */
+export function tableTotalScore(mode: GameMode): number {
   return numPlayersForMode(mode) === 4 ? 100000 : 105000;
 }
 
@@ -66,7 +67,7 @@ export function promotionConditions(lv: LevelWithDelta, mode: GameMode): RankCon
 
   const point = getVersionAdjustedScore(level, currentPoint(lv));
   const needed = maxPoint - point;
-  const total = totalFor(mode);
+  const total = tableTotalScore(mode);
 
   const results: RankCondition[] = [];
   for (let rank = 0; rank < n; rank++) {
@@ -95,7 +96,7 @@ export function demotionConditions(lv: LevelWithDelta, mode: GameMode): RankCond
   if (cannotDemote) return allNever(n);
 
   const point = getVersionAdjustedScore(level, currentPoint(lv));
-  const total = totalFor(mode);
+  const total = tableTotalScore(mode);
 
   const results: RankCondition[] = [];
   for (let rank = 0; rank < n; rank++) {

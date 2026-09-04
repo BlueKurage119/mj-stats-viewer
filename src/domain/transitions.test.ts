@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { demotionConditions, promotionConditions } from './transitions';
+import { demotionConditions, promotionConditions, tableTotalScore } from './transitions';
 import { calculateDeltaPoint, parseLevelId } from '../domain';
+
+describe('transitions: tableTotalScore', () => {
+  it('四麻（16=王座）は100000、三麻（26=三王座）は105000', () => {
+    expect(tableTotalScore(16)).toBe(100000);
+    expect(tableTotalScore(26)).toBe(105000);
+  });
+});
 
 describe('transitions: promotionConditions（三麻）', () => {
   const lv = { id: 20302, score: 1350, delta: 0 }; // 残 50pt
