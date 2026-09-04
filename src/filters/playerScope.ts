@@ -14,7 +14,16 @@ export interface PlayerScope {
   readonly setPeriod: (next: PeriodPreset) => void;
 }
 
-/** 各タブ（Outlet の子ルート）はこれで scope を取る。useOutletContext<PlayerScope>() の薄いラッパー */
+/**
+ * 各タブ（Outlet の子ルート）はこれで scope を取る。useOutletContext<PlayerScope>() の薄いラッパー。
+ * ルート定義上、タブは PlayerLayout の子ルートとしてしか描画されない（np/id 不正時は
+ * PlayerLayout が <Navigate> を返し Outlet 自体が描画されない）ため、正常系で throw する
+ * 経路は存在しない。宣言型どおり非 null を保証するためのランタイムガード（issue-8 §3.5）。
+ */
 export function usePlayerScope(): PlayerScope {
-  return useOutletContext<PlayerScope>();
+  const scope = useOutletContext<PlayerScope | undefined>();
+  if (!scope) {
+    throw new Error('usePlayerScope must be used within PlayerLayout の Outlet');
+  }
+  return scope;
 }
