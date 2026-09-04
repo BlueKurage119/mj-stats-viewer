@@ -1,31 +1,57 @@
 /**
  * カード1（アイデンティティ）と SummaryPanel のスタイル。
  * 色は必ず CSS 変数（--md-sys-color-* / --md-custom-color-*）で書くこと。
+ *
+ * 【2026-09-05 是正】ヒーロー（.identity）は状態非依存の固定4行に限定した。
+ * gap は 16 → 8。840px 以上の2カラム grid は削除（右カラムに置く条件ブロックが層側へ移ったため）。
  * 詳細: docs/design/issue-8-identity-card.md §5
  */
 
 .identity {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+}
+
+.identity__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .identity__name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0;
 }
 
+.identity__scope {
+  flex: 0 0 auto;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 .identity__level {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
+/*
+ * flex-shrink: 0 が必須。既定値 1 のままだと、崩れた素点表示（CJK は文字間で改行できる）が
+ * flex-shrink の対象になり、狭い画面で badge が2行に折り返して行の高さが増える
+ * （scroll不能なほどではないが実測+31px）。overflow: hidden は「縮めて畳む」ためではなく
+ * 「自然な1行の幅のまま右端を切る」ために .identity__level に付けている（§1.9-7）。
+ */
 .identity__badge {
   color: var(--md-sys-color-on-surface);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .identity__stars {
@@ -35,11 +61,15 @@
 
 .identity__point {
   color: var(--md-sys-color-primary);
+  flex-shrink: 0;
+}
+
+.identity__max {
+  flex-shrink: 0;
 }
 
 .identity__max,
-.identity__remaining,
-.identity__meta {
+.identity__remaining {
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
@@ -70,15 +100,10 @@
   border-radius: 4px;
 }
 
+/* ready の段位・pt 行（52px）と1pxの差もなく一致させる（旧40pxが44px跳ねの主因だった） */
 .identity__level--loading .identity__skeleton--level {
   width: 220px;
-  height: 40px;
-}
-
-.identity__progress--loading {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--md-sys-color-surface-container-highest);
+  height: 52px;
 }
 
 .identity__skeleton--remaining {
@@ -86,13 +111,21 @@
   height: 20px;
 }
 
-.identity__level--not-found {
+/* notFound / error。24（名前行）+8+94 = 126 で ready と1pxの差もなく一致させる */
+.identity__message {
+  min-height: 94px;
+  margin: 0;
+}
+
+.identity__message--not-found {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-.identity__level--error {
+.identity__message--error {
   color: var(--md-sys-color-error);
 }
+
+/* ここから下は LevelDetailCard（層側）の中身。旧 IdentityCard から移設。クラス名・testid は変えていない */
 
 .identity__conditions {
   display: flex;
@@ -144,43 +177,27 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
-@media (min-width: 840px) {
-  .identity {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 32px;
-    row-gap: 16px;
-    grid-template-areas:
-      'name name'
-      'level cond'
-      'progress cond'
-      'remaining cond';
-  }
+.identity__meta {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
 
-  .identity__name {
-    grid-area: name;
-  }
+.level-detail {
+  display: block;
+  box-sizing: border-box;
+}
 
-  .identity__level {
-    grid-area: level;
-  }
+.level-detail__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  .identity__progress,
-  .identity__progress--loading {
-    grid-area: progress;
-  }
-
-  .identity__remaining {
-    grid-area: remaining;
-  }
-
-  .identity__conditions {
-    grid-area: cond;
-  }
-
-  .identity__meta {
-    grid-column: 1 / -1;
-  }
+.level-detail__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
 }
 
 .summary-panel {
