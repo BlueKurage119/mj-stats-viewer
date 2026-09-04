@@ -183,3 +183,47 @@ describe('identityView: preferredMode の半荘不変条件（U14）', () => {
     }
   });
 });
+
+/**
+ * 再検収（2026-09-05）で「実装は正しいがテストの次元が欠けている」と指摘された分。
+ * ミューテーションでは SURVIVED になるが、到達経路は実在する（降段の畳み込み）か、
+ * ブラウザ実測でしか確認されていなかった（progress 等の受け渡し）。
+ */
+describe('buildIdentityView — 検収で指摘された未検証の次元', () => {
+  it('U17: 降段側の連続する無条件行が畳まれる（魂天1・0pt で 3位以下）', () => {
+    // 魂天1（10701）を 0pt にすると demotionConditions は [never, never, always, always] を返す。
+    // 末尾から連続する always が2件なので 1行に畳まれ、ラベルは「3位以下」になる。
+    const view = buildIdentityView(makeInfo({ id: 10701, score: 0, delta: 0 }));
+
+    expect(view.conditionMode).not.toBeNull();
+    expect(pluck(view.demotions)).toEqual([{ rankLabel: '3位以下', threshold: null }]);
+  });
+
+  it('U18: progress / pointText / maxPointText / remainingText / nextLevelText が上限ptから一貫して導かれる', () => {
+    // 雀傑2（10302）は上限 1400pt。232pt なら残り 1168pt、進捗 232/1400。
+    const view = buildIdentityView(makeInfo({ id: 10302, score: 232, delta: 0 }));
+
+    expect(view.pointText).toBe('232');
+    expect(view.maxPointText).toBe('1400');
+    expect(view.remainingText).toBe('1168');
+    expect(view.nextLevelText).toBe('雀傑3');
+    expect(view.progress).toBeCloseTo(232 / 1400, 10);
+  });
+
+  it('U19: 上限ptが無い段位（魂天20）は progress と残pt 系がすべて null', () => {
+    const view = buildIdentityView(makeInfo({ id: 10720, score: 5000, delta: 0 }));
+
+    expect(view.maxPointText).toBeNull();
+    expect(view.progress).toBeNull();
+    expect(view.remainingText).toBeNull();
+    expect(view.nextLevelText).toBeNull();
+  });
+
+  it('U20: nickname / gameCount / levelText が入力からそのまま運ばれる', () => {
+    const view = buildIdentityView(makeInfo({ id: 10302, score: 232, delta: 0 }, 4321));
+
+    expect(view.nickname).toBe('テストプレイヤー01');
+    expect(view.gameCount).toBe(4321);
+    expect(view.levelText).toBe('雀傑2');
+  });
+});

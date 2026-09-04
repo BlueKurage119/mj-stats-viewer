@@ -4,6 +4,7 @@ import { IdentityCard } from '../summary/IdentityCard';
 import { LevelDetailCard } from '../summary/LevelDetailCard';
 import { FilterBar } from '../filters/FilterBar';
 import type { CurrentIdentityState } from '../filters/useCurrentIdentity';
+import type { GlobalFilter } from '../filters/filterState';
 import type { CurrentLevelInfo, LevelWithDelta } from '../api';
 import '../shell/shell.css';
 
@@ -93,6 +94,20 @@ const HERO_PROBES: readonly { readonly dataState: string; readonly state: Curren
   { dataState: 'ready-with-conditions', state: READY_WITH_CONDITIONS_STATE },
 ];
 
+/**
+ * プローブが FilterBar に渡すフィルタ。**null を渡してはならない。**
+ *
+ * null（＝チップが全て未選択）で描画すると、選択チップの先頭に付くチェックマーク（+18px/個）が
+ * 無いぶんチップ行が実ページより狭くなる。検収（2026-09-05）で、この差により期間チップ行が
+ * 1行↔2行に飛び、プローブが実ページより 40px 楽観的な値を出していた。
+ *
+ * 実ページで最も幅を食う状態＝全モード選択（6個）＋期間1つ選択に合わせる。
+ */
+const PROBE_FILTER = {
+  modes: [16, 12, 9, 15, 11, 8],
+  period: 'all',
+} as const satisfies GlobalFilter;
+
 function noopModes(): void {
   // ヒーロー実寸プローブは寸法計測のみが目的で、操作には応答しない。
 }
@@ -113,7 +128,12 @@ export function IdentityGallery(): ReactElement {
           <div className="layered-sheet__hero">
             <div className="player-hero">
               <IdentityCard state={state} fallbackName="プレイヤー: 000000" />
-              <FilterBar numPlayers={4} filter={null} onModesChange={noopModes} onPeriodChange={noopPeriod} />
+              <FilterBar
+                numPlayers={4}
+                filter={PROBE_FILTER}
+                onModesChange={noopModes}
+                onPeriodChange={noopPeriod}
+              />
             </div>
           </div>
         </div>

@@ -782,16 +782,32 @@ display: flex; flex-direction: column; gap: 16px;
 | # | 規定 | 値 | 根拠 |
 |---|---|---|---|
 | H1 | **不変性**（最重要） | ヒーロー高さは `state.kind`・昇降条件の有無・段位・ニックネーム長・コンテンツ幅 280〜343px のいずれによっても**変わらない** | sticky 要素の高さが動くことが今回の欠陥そのもの。§3.1 の構造規則がこれを保証する。実測で `.identity` は全15通り 126px（§1.9-5） |
-| H2 | **絶対上限（実機相当）** | ビューポート **375×812・デバイスエミュレーション有効**（コンテンツ幅343）で `[data-testid="sheet-hero"]` ≤ **344px** | 是正後の実測 330px ＋ 14px。**14px は「行が1つ増えたら必ず落ちる」幅**（最小の行単位は `label-small` の 16px）。フォント差による数px の揺れは吸収し、構造の退行は見逃さない |
-| H3 | **絶対上限（狭い方）** | ビューポート **360×812** で ≤ **384px** | 是正後の実測 370px ＋ 14px。`FilterBar` の期間チップ行が2行に折り返す側の条件（§1.9-4）。ここを外すと「手元の環境では通るが実機で落ちる」が起きる |
+| H2 | **絶対上限（実機相当）** | ビューポート **375×812・デバイスエミュレーション有効**（コンテンツ幅343）で `[data-testid="sheet-hero"]` ≤ **304px** | 是正後の実測 290px ＋ 14px。**14px は「行が1つ増えたら必ず落ちる」幅**（最小の行単位は `label-small` の 16px）。フォント差による数px の揺れは吸収し、構造の退行は見逃さない |
+| H3 | **絶対上限（狭い方）** | ビューポート **360×812** で ≤ **304px** | 是正後の実測 290px ＋ 14px。#40 の修正で `FilterBar` が折り返さなくなったため、375 と 360 で同値になった（折り返していた頃は 15px の幅差で ±40px 動いていた。§1.9-4） |
 | H4 | **層側の初期表示** | 375×812・スクロール位置0で、層側の先頭カードの下端がボトムナビの上端より上にある | 「サマリータブを開いた瞬間に最初のカードが全部見える」という製品要件。数値ではなく要素位置で測るので、後続 Issue でカードが増えても意味が保たれる |
+
+**【2026-09-05 再検収による H2・H3 の改訂】** 初回の是正時に置いた上限（H2 344 / H3 384）は、**計測器が 40px 楽観的**だったために実ページを過小評価した値だった。dev ギャラリーのヒーロー実寸プローブが `FilterBar` に `filter={null}` を渡していたため全チップが未選択で描画され、選択チップの先頭に付くチェックマーク（+18px/個）が無いぶんチップ行が狭くなり、期間チップ行が1行に収まってしまっていた（実ページは常に期間チップが1つ選択されるので2行）。
+
+対処として2つを行った:
+
+1. **プローブを実ページと同じ条件で描画するよう是正**（`PROBE_FILTER` を渡す。§4.6）。これにより「プローブで測った値＝実ページの値」が成立する
+2. **`FilterBar` の折り返し欠陥（§9.1）を Issue #40 として切り出して修正**（`fix/issue-40-chip-nowrap` / PR #41）。本ブランチはこの修正を取り込んでいる
+
+実測（`fix/issue-40-chip-nowrap` 取り込み後）:
+
+| 計測対象 | ビューポート375 | ビューポート360 |
+|---|---|---|
+| プローブ `[data-testid="gallery-hero"]`（2状態とも） | **290px** | **290px** |
+| 実ページ `[data-testid="sheet-hero"]` | **290px** | **290px** |
+| `identity-card`（全状態） | **126px** | **126px** |
+
+**この上限は Issue #40 の修正が入っていることを前提にしている。** 仮に Issue #6 の UI検証 D1 の仕切り直しで「2段折り返しのほうが良い」とオーナーが判断した場合、ヒーローは 330px に戻るため H2・H3 を 344px へ再改訂すること。
 
 超過した場合の対処（この順に試す）:
 
 1. `.identity` の `gap` 8 → 4（−12px）
 2. `.identity__point` を `display-medium` → `display-small`（−8px。Issue の「Display級」は満たしたまま）
 3. `.layered-sheet__hero` の `padding` 24/16/48 → 16/16/40（−16px。ただし `shell.css` を触るので全タブに影響する）
-4. `FilterBar` の折り返し欠陥を直す（−40px。**Issue #6 の領域。統括担当の判断が要る**。§9）
 
 ---
 
@@ -895,8 +911,9 @@ jsdom 未導入のため**コンポーネントテストは書かない**。`ide
 | B3 | B1 の状態で `getComputedStyle(document.querySelector('.identity__point')).color` と `getComputedStyle(document.documentElement).getPropertyValue('--md-sys-color-primary')` を比較 | 同一色。また `.identity` 配下の要素の `color` / `background-color` が、いずれも `:root` の `--md-sys-color-*` のどれかの値と一致する（トークン外の色が無い） |
 | B4 | `#/__identity` を開く | 12状態すべてで `IdentityCard` と（ready のときは）`LevelDetailCard` が描画され、コンソールエラー0。状態10（雀士3）に `[data-testid="identity-conditions"]` が**存在しない**。状態9（魂天20）に `identity__max` が**無く** `昇段上限なし` が出る（**進捗バーの枠は出る**。§4.3）。状態5 に `2位以内`、状態6 に `1位` と `2位 9,100点以上`、状態7 に `3位 9,000点以下` と `4位` が出る。**条件行は `[data-testid="level-detail-card"]` の中にあり、`[data-testid="identity-card"]` の中には無い** |
 | **B5-1**<br>不変性 | `#/__identity` を `preset:'mobile'`（375×812、`clientWidth===375`）で開き、12枚すべての `[data-testid="identity-card"]` の `getBoundingClientRect().height` を配列で取る。続けて `resize_window({width:360,height:812})` にして同じ配列を取る | **24個の値がすべて同一**（`new Set(...).size === 1`）。とくに **loading（状態1）と ready（状態4）の差が 0px**、**条件あり（状態6）と条件なし（状態4）の差が 0px**、**notFound/error（状態2・3）も同値**。設計上の期待値は **126**（§1.9-5）だが、判定は「全一致」であり 126 ちょうどである必要はない |
-| **B5-2**<br>絶対上限（実機相当） | 同ページの `[data-testid="gallery-hero"]`（§4.6 のヒーロー実寸プローブ）を `preset:'mobile'` で測る。まず `el.getBoundingClientRect().width === document.documentElement.clientWidth`（375）を確認してから `.height` を読む | 2つのプローブ（loading / 条件あり）の高さが**同一**で、**344 以下**（§5.3 H2。設計値 330＋許容14） |
-| **B5-3**<br>絶対上限（狭い側） | `resize_window({width:360,height:812})`（`clientWidth===360`）にして B5-2 を再実行 | 2つのプローブの高さが**同一**で、**384 以下**（§5.3 H3。設計値 370＋許容14） |
+| **B5-2**<br>絶対上限（実機相当） | 同ページの `[data-testid="gallery-hero"]`（§4.6 のヒーロー実寸プローブ）を `preset:'mobile'` で測る。まず `el.getBoundingClientRect().width === document.documentElement.clientWidth`（375）を確認してから `.height` を読む | 2つのプローブ（loading / 条件あり）の高さが**同一**で、**304 以下**（§5.3 H2。実測 290＋許容14） |
+| **B5-3**<br>絶対上限（狭い側） | `resize_window({width:360,height:812})`（`clientWidth===360`）にして B5-2 を再実行 | 2つのプローブの高さが**同一**で、**304 以下**（§5.3 H3。実測 290＋許容14） |
+| **B5-5**<br>プローブの妥当性<br>【2026-09-05 追加】 | 実ページ（`vite preview` の `#/4/player/<id>/summary`）の `[data-testid="sheet-hero"]` を B5-2・B5-3 と同じ2幅で測り、プローブの値と突き合わせる | **プローブの値と実ページの値が一致**すること。ズレたらプローブが壊れている（初回の是正では `filter={null}` のせいで 40px 楽観的だった）。**この項目は他の B5 より先に実行すること** |
 | **B5-4**<br>層側の初期表示 | `#/4/player/<B1と同じID>/summary` をスクロール位置0で開き（`preset:'mobile'`）、`document.querySelector('[data-testid="level-detail-card"], [data-testid="rank-graph-placeholder"]')` の**先頭カードの下端**と、`document.querySelector('.bottom-nav').getBoundingClientRect().top` を比べる | 先頭カードの `bottom` **≤** ボトムナビの `top`（＝サマリータブを開いた瞬間に最初のカードが全部見えている。§5.3 H4）。かつページ本体に水平スクロールが発生しない（`document.documentElement.scrollWidth <= document.documentElement.clientWidth`）。**B1 と同じプレイヤーを続けて見るのでAPIコールは増えない** |
 | B6 | `#/__identity` で `localStorage.setItem('mjsv:color-mode','dark')` → リロード | 全12状態が dark で描画され、文字が背景に埋もれない。`getComputedStyle(document.documentElement).colorScheme === 'dark'`。※ `prefers-color-scheme` のエミュレーションは `matchMedia` の `change` を発火しないため、**必ず localStorage 経由で切り替えること**（CLAUDE.md 既知の検証環境の制約） |
 | B7 | 段位シード切替: `#/4/player/<雀傑のID>/summary` と `#/4/player/<雀豪のID>/summary` で `getComputedStyle(document.documentElement).getPropertyValue('--md-sys-color-primary')` を読む | 値が異なる。light では雀傑 `#775a00` / 雀豪 `#964900` / 雀聖 `#ba1a20` / 魂天 `#0060a8`、dark では `#f3bf2f` / `#ffb786` / `#ffb3ac` / `#a2c9ff` のいずれかに一致する（§1.7 実測値）。**B7 は B4 の dev ギャラリーで代替してよい**（ギャラリーに段位を変える操作を用意した場合）。API 消費を避けるならそちらを優先する |
@@ -968,7 +985,7 @@ jsdom 未導入のため**コンポーネントテストは書かない**。`ide
 1. **実 API レスポンスでの確認をしていない。** 本設計の入力値はすべて合成データ（`src/domain/__fixtures__` と手組みの `LevelWithDelta`）で検証した。実プレイヤーの `nickname` の長さ・使用文字、`gameCount` の桁、`level.delta` の実際の分布は未観測。ニックネームは省略記号で切る設計にしてあるが、**実データでの見え方は B1 で初めて確認される**。
 2. **昇降条件が成立している実プレイヤーを観測していない。** §1.2 の表はすべて手組み入力に対するドメイン関数の実行結果である。実データで条件ブロックが出る状態に遭遇するかは運次第で、B1 では確認できない可能性が高い。**B4（dev ギャラリー）が条件表示の実質的な検証**である。
 3. **到達可能素点の上限 `total/(rank+1)` は近似**（§3.3）。飛び終局で最下位が負素点になる局面では破れる。実戦の素点分布で検証していない。
-4. ~~**ヒーロー高さ 365px という上限は設計時の見積り**。~~ **【2026-09-05 解決】** 検収で未達が実証され、§1.9 で実測し直した。上限は §5.3 のとおり実測ベースの 344 / 384px に改訂した。この項目は「推定で書いて外した」実例として残す。
+4. ~~**ヒーロー高さ 365px という上限は設計時の見積り**。~~ **【2026-09-05 解決】** 検収で未達が実証され、§1.9 で実測し直した。上限は §5.3 のとおり実測ベースに改訂した（344/384 → 再検収でプローブの欠陥が判明し 304/304 へ再改訂）。この項目は「推定で書いて外した」実例として残す。
 5. **`useRankTheme` のクリーンアップと本体の setState が同一コミットでバッチされ、テーマが点滅しない**という記述は React 18+ の自動バッチングからの推論であり、実行して観測していない。B7/B8 で点滅が見えたら、`levelId` 変化時にクリーンアップを走らせない実装（前回値を ref で保持して差分がある時だけ `setRank`）へ変更する。
 6. **`ElevatedCard`（`@material/web/labs/`）は labs 扱い**。API 安定性の保証が本体コンポーネントより弱い。`ComponentGallery` で描画実績はあるが、`min-height` を効かせるための内部 CSS カスタムプロパティ（`--md-elevated-card-container-shape` 等）の実挙動は未確認。効かない場合はラッパー `div` 側で高さを取ること。
 
