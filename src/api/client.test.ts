@@ -343,3 +343,49 @@ describe('apiGet — キャッシュ上限到達で全クリアされる (G)', (
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('apiGet — 中断された Promise はキャッシュに残らない (#38)', () => {
+  it('abort 直後に同一 path を要求すると、道連れにならず新しい fetch が発行される', async () => {
+    const path = uniquePath('abort_evicts_cache');
+    // 1本目は永久に解決しない fetch にして「中断されるまで在庫が残る」状況を作る
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: string, init?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      )
+      .mockResolvedValue(jsonResponse(200, { value: 'second' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new AbortController();
+    const aborted = apiGet<{ value: string }>(path, {}, controller.signal);
+    // 未処理 rejection にしないでおく
+    const abortedSettled = aborted.catch(() => 'rejected' as const);
+
+    // React StrictMode の cleanup 相当。abort と同じタスク内で同一 path を引き直す
+    controller.abort();
+    const retried = await apiGet<{ value: string }>(path);
+
+    await expect(abortedSettled).resolves.toBe('rejected');
+    expect(retried).toEqual({ value: 'second' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('正常に解決した Promise は signal を渡していてもキャッシュに残る', async () => {
+    const path = uniquePath('abort_keeps_resolved');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { value: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new AbortController();
+    await apiGet(path, {}, controller.signal);
+    // 解決後の abort（＝呼び出し元のアンマウント等）でキャッシュを落とさない
+    controller.abort();
+    await apiGet(path);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
