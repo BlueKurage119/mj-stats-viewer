@@ -161,6 +161,30 @@ export function apiGet<T>(path: string, opts: ApiGetOptions = {}, signal?: Abort
     throw err;
   });
 
+  // 中断が確定した時点で「同期的に」キャッシュから落とす。reject 経由の cache.delete は
+  // マイクロタスクなので、それを待っていると「abort → 同一 path を即座に再要求」の間に
+  // 道連れの Promise を掴ませてしまう（React StrictMode の二重マウントで決定的に踏む。#38）。
+  //
+  // ただし「解決済みの Promise を後から abort されたとき」は落としてはならない（値は有効で、
+  // 落とすと無駄な再リクエストになる）。settled の追跡はこの promise に対する最初の then として
+  // 登録するため、同じ promise を await している呼び出し元より必ず先に走る（登録順で発火する）。
+  if (signal) {
+    let settled = false;
+    const markSettled = () => {
+      settled = true;
+    };
+    void promise.then(markSettled, markSettled);
+    signal.addEventListener(
+      'abort',
+      () => {
+        if (!settled && cache.get(path) === promise) {
+          cache.delete(path);
+        }
+      },
+      { once: true },
+    );
+  }
+
   if (cache.size >= MAX_CACHE_ENTRIES) {
     cache.clear();
   }
