@@ -3,6 +3,7 @@ import type { GameMode, NumPlayers, PeriodPreset } from '../api';
 import type { GlobalFilter } from './filterState';
 import type { CurrentIdentityState } from './useCurrentIdentity';
 import type { FilteredStatsState } from './useFilteredStats';
+import type { DistributionState } from './useGlobalHistogram';
 
 export interface PlayerScope {
   readonly numPlayers: NumPlayers;
@@ -10,6 +11,7 @@ export interface PlayerScope {
   readonly identity: CurrentIdentityState;
   readonly filter: GlobalFilter | null;
   readonly stats: FilteredStatsState;
+  readonly distribution: DistributionState;
   readonly setModes: (next: readonly GameMode[]) => void;
   readonly setPeriod: (next: PeriodPreset) => void;
 }

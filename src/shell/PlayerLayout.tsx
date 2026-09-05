@@ -15,6 +15,7 @@ import {
 import { useCurrentIdentity } from '../filters/useCurrentIdentity';
 import { useGlobalFilter } from '../filters/useGlobalFilter';
 import { useFilteredStats } from '../filters/useFilteredStats';
+import { useGlobalHistogram } from '../filters/useGlobalHistogram';
 import { FilterBar } from '../filters/FilterBar';
 import { IdentityCard } from '../summary/IdentityCard';
 import { effectiveLevelPoint } from '../summary/identityView';
@@ -81,6 +82,7 @@ function PlayerLayoutInner({
   const identity = useCurrentIdentity(numPlayers, playerId);
   const { filter, setModes, setPeriod } = useGlobalFilter(numPlayers, identity);
   const stats = useFilteredStats(numPlayers, playerId, filter);
+  const distribution = useGlobalHistogram(numPlayers);
 
   // 段位シード切替に渡す levelId は正規化後の値（issue-8 §1.4・§3.4）。
   // 表示中の段位タグ（IdentityCard）とテーマ色が食い違わないようにする。
@@ -93,6 +95,7 @@ function PlayerLayoutInner({
     identity,
     filter,
     stats,
+    distribution,
     setModes,
     setPeriod,
   };
