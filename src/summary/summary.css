@@ -565,7 +565,7 @@
 .playstyle-card {
   display: block;
   box-sizing: border-box;
-  --tendency-row-height: 28px;
+  --tendency-row-height: 36px;
   --note-height: 20px;
   --radar-stroke: var(--md-sys-color-primary);
   --radar-fill: var(--md-sys-color-primary);
@@ -695,8 +695,9 @@
 .tendency__seg {
   position: relative;
   flex: 1 1 0;
-  height: 8px;
-  border-radius: 2px;
+  /* 8px → 16px（オーナー指示・2026-09-06）。--tendency-row-height も 28 → 36 に連動させている */
+  height: 16px;
+  border-radius: 3px;
   background: var(--md-sys-color-surface-container-highest);
 }
 
@@ -706,7 +707,8 @@
 
 /*
  * 現在位置の形状マーカー（色を唯一の伝達手段にしない。§3.6）。上向きの三角で、
- * セグメント（高さ8px）の下端に収まる高さ6pxに抑え、行の高さを増やさない。
+ * セグメント（高さ16px）の下端に収まる高さ10pxに抑え、行の高さを増やさない。
+ * **セグメント高さを変えたらここも必ず見直すこと**（はみ出すと行が伸びて R1 が落ちる）。
  */
 .tendency__marker {
   position: absolute;
@@ -715,9 +717,9 @@
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-bottom: 6px solid var(--md-sys-color-primary);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid var(--md-sys-color-primary);
 }
 
 /* R1 の生命線その2: loading では中身が空になるが、高さはこの変数から決まる（§3.4-3） */

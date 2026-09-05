@@ -81,8 +81,12 @@ function buildPolygonPoints(points: readonly RadarPoint[]): string | null {
   return points.map((p) => `${p.x},${p.y}`).join(' ');
 }
 
+/*
+ * バー両端の極ラベル。レーダーの軸ラベル（RADAR_AXIS_ORDER の '攻' / '守'）とは別物で、
+ * こちらは1文字に詰める必要がないため語として読める形にしている（オーナー指示・2026-09-06）。
+ */
 const POLE_LABELS: Record<TendencyRow['key'], { start: string; end: string }> = {
-  offenseDefense: { start: '守', end: '攻' },
+  offenseDefense: { start: '守備', end: '攻撃' },
   concealedSpeed: { start: '門前', end: '速度' },
 };
 

@@ -155,8 +155,8 @@ describe('playstyleView: buildPlaystyleView (傾向2軸)', () => {
       mode: 16,
     });
     const offense = view.rows.find((r) => r.key === 'offenseDefense')!;
-    expect(offense.poleStart).toBe('守');
-    expect(offense.poleEnd).toBe('攻');
+    expect(offense.poleStart).toBe('守備');
+    expect(offense.poleEnd).toBe('攻撃');
     expect(offense.band).toBe(4);
 
     const speedView = buildPlaystyleView({
@@ -196,7 +196,7 @@ describe('playstyleView: buildPlaystyleView (傾向2軸)', () => {
     });
     const offense = view.rows.find((r) => r.key === 'offenseDefense')!;
     expect(offense.band).toBe(expectedBand);
-    expect(offense.ariaLabel).toBe(`守 ⇔ 攻: 5段階のうち守側から${expectedBand + 1}番目`);
+    expect(offense.ariaLabel).toBe(`守備 ⇔ 攻撃: 5段階のうち守備側から${expectedBand + 1}番目`);
     expect(offense.ariaLabel).not.toMatch(/バランス型|攻撃寄り|守備寄り|鉄壁|フルアタック|門前主義|速攻|タイプ/);
   });
 });

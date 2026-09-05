@@ -9,7 +9,15 @@
 
 ---
 
-## 0.1 改訂履歴 — 第1版から何をなぜ変えたか（2026-09-06 オーナー確定）
+## 0.1 改訂履歴
+
+### 第3版（2026-09-06・オーナー指示による微修正。検収通過後）
+
+| # | 変更 | 理由 |
+|---|---|---|
+| R-4 | 傾向バーの極ラベル `守` / `攻` → **`守備` / `攻撃`** | オーナー指示。レーダーの軸ラベル（`RADAR_AXIS_ORDER` の1文字表記）とは別物で、バー側は1文字に詰める必要がないため語として読める形にする。**レーダーの軸ラベルは変えない** |
+| R-5 | セグメント高さ **8px → 16px**（2倍）。`--tendency-row-height` を 28 → 36px、形状マーカーを 6 → 10px に連動 | オーナー指示。マーカーがセグメント枠内に収まること・R1 が維持されることを実測で確認済み（343px 476×3 / 700px 380×3、マーカー 10px ⊂ セグメント 16px） |
+ — 第1版から何をなぜ変えたか（2026-09-06 オーナー確定）
 
 第1版は「タイプ名見出し＋5段階ラベル文言をオーナーに確定してもらう（第1版 §6 の D1/D2）」「閾値 ±0.5/±1.5 は据え置く（§3.1 の案 A）」という構成だった。オーナーが2点を確定させたため、本版で全面的に反映した。
 
@@ -411,7 +419,7 @@ export interface RadarPoint {
 export interface TendencyRow {
   readonly key: 'offenseDefense' | 'concealedSpeed';
   readonly band: 0 | 1 | 2 | 3 | 4 | null;   // null = 判定不能（分布欠損）
-  readonly poleStart: string;      // バー左端の極ラベル（'守' / '門前'）
+  readonly poleStart: string;      // バー左端の極ラベル（'守備' / '門前'）
   readonly poleEnd: string;        // バー右端の極ラベル（'攻' / '速度'）
   readonly ariaLabel: string;      // '守 ⇔ 攻: 5段階のうち守側から4番目' / '守 ⇔ 攻: 判定できません'
 }
@@ -483,7 +491,7 @@ export function PlaystyleCard(props: PlaystyleCardProps): ReactElement;
 
 `.playstyle-card*` / `.radar*` / `.tendency*` を**ファイル末尾に追記**する。既存規則は1行も変えない。
 
-- `.playstyle-card { --tendency-row-height: 28px; --note-height: 20px; --radar-stroke: var(--md-sys-color-primary); --radar-fill: var(--md-sys-color-primary); }`（**`--typename-height` は第1版で使っていた変数。削除する**）
+- `.playstyle-card { --tendency-row-height: 36px; --note-height: 20px; --radar-stroke: var(--md-sys-color-primary); --radar-fill: var(--md-sys-color-primary); }`（**`--typename-height` は第1版で使っていた変数。削除する**）
 - `.playstyle-card__radar { width: 100%; max-width: 280px; aspect-ratio: 1; }` / `svg { display:block; width:100%; height:100% }`
 - `.radar__ring { stroke: var(--md-sys-color-outline-variant); fill: none }` ／ `.radar__ring[data-mid="true"] { stroke: var(--md-sys-color-outline) }`
 - `.radar__spoke { stroke: var(--md-sys-color-outline-variant) }`
@@ -491,8 +499,8 @@ export function PlaystyleCard(props: PlaystyleCardProps): ReactElement;
 - `.radar__dot { fill: var(--radar-stroke) }` ／ `.radar__label`・`.radar__value { fill: var(--md-sys-color-on-surface-variant) }`
 - `.tendency__row { min-height: var(--tendency-row-height); display:flex; align-items:center; gap:8px }` — **R1 の生命線その1**
 - `.playstyle-card__note { min-height: var(--note-height); margin:0 }` — **R1 の生命線その2**（`loading` では中身が空。§3.4-3）
-- `.tendency__bar { display:flex; gap:2px; flex:1 1 auto; list-style:none; margin:0; padding:0 }` / `.tendency__seg { position:relative; flex:1 1 0; height:8px; border-radius:2px; background: var(--md-sys-color-surface-container-highest) }` / `.tendency__seg[data-active="true"] { background: var(--md-sys-color-primary) }`
-- `.tendency__marker` — アクティブセグメントの中心に置く**形状マーカー**（`position:absolute; left:50%; transform:translateX(-50%)` ＋ CSS 三角形。色は `--md-sys-color-primary`）。**セグメント高さ 8px の枠内に収め、行の高さを増やさないこと**（増やすと `--tendency-row-height` を上げる必要が出る）
+- `.tendency__bar { display:flex; gap:2px; flex:1 1 auto; list-style:none; margin:0; padding:0 }` / `.tendency__seg { position:relative; flex:1 1 0; height:16px; border-radius:3px; background: var(--md-sys-color-surface-container-highest) }` / `.tendency__seg[data-active="true"] { background: var(--md-sys-color-primary) }`
+- `.tendency__marker` — アクティブセグメントの中心に置く**形状マーカー**（`position:absolute; left:50%; transform:translateX(-50%)` ＋ CSS 三角形。色は `--md-sys-color-primary`）。**セグメント高さ 16px の枠内に収め、行の高さを増やさないこと**（増やすと `--tendency-row-height` を上げる必要が出る）
 - `.tendency__pole { color: var(--md-sys-color-on-surface-variant); flex: 0 0 auto }`（両端の極ラベル。`md-typescale-label-medium` 相当）
 - `.playstyle-card__body--message > * { visibility: hidden }` ＋ `.playstyle-card__message { position:absolute; inset:0; … ; color: var(--md-sys-color-error) }`（#9 §4.7 と同じ手口）
 - **レイアウト**: 既定は縦積み（レーダー → 傾向2行）。`@container playstyle-card (min-width: 600px)` で `.playstyle-card__body { flex-direction: row }`（レーダー ｜ 傾向）。**`@container` ブロックは基本ルールより後ろ（ファイル末尾）に置くこと** — 詳細度が同じで基本ルールが後ろにあると打ち消される（#9 で実際に踏んだ）
@@ -793,7 +801,7 @@ export function PlaystyleCard(props: PlaystyleCardProps): ReactElement;
 3. **三麻（pl3）の `global_histogram` は完全に未確認**（#4 §9 から継続）。`打点效率` / `铳点损失` 等が band `"0"` に存在するかは不明。**設計は全軸 `null` になっても壊れない形にした**（§3.4 の `unavailable`）が、三麻で実際に何が出るかは受け入れ条件 V7（オーナー委託）で初めて分かる。
 4. **`運` 軸のばらつきが他4軸の約 0.6 倍**という §1.5(b) の数値は合成フィクスチャ由来。実データでの倍率は未確認。**ただし「運軸は偏差値ではなく比率指標で、他軸と物差しが違う」ことは定義上確実**である。この非対称を UI で補正しない（補正すると `calcRadar` の値と画面が食い違う）。
 5. **バンドル上限 500.0 kB / gzip 139.0 kB は実測プローブ（+4.03 / +1.54）に約3倍を掛けた枠**であり、フル実装の実測ではない。倍率の根拠は #9 の実績（プローブ +1.38 → 実装 +5.67、約4.1倍）。**上振れも下振れもありうる。**
-6. **`--tendency-row-height: 28px` / `--note-height: 20px` の具体値は typescale からの見積り**であり、ブラウザ実測ではない。`ready` 側の自然高がこれを超えると R1 が壊れる。**B4 が検出する**が、超えていた場合は「変数の値を上げる」ことで直す（ready 側を縮めない）。**形状マーカー（§3.6）が行の高さを押し上げないことも未確認**で、押し上げていれば同じく B4 が検出する。
+6. **`--tendency-row-height: 36px` / `--note-height: 20px` の具体値は typescale からの見積り**であり、ブラウザ実測ではない。`ready` 側の自然高がこれを超えると R1 が壊れる。**B4 が検出する**が、超えていた場合は「変数の値を上げる」ことで直す（ready 側を縮めない）。**形状マーカー（§3.6）が行の高さを押し上げないことも未確認**で、押し上げていれば同じく B4 が検出する。
 7. **`@container` の 600px 境界はカード2（#9）に揃えただけ**で、カード3の内容量から導いた値ではない。実測（B9）で横並びが窮屈なら境界を上げる余地がある。
 8. **傾向バーの `aria-label` の読み上げ文言は実機のスクリーンリーダーで確認していない。** 「守側から4番目」のような位置表現が音声で自然に聞こえるかは未検証。文言の当否は V2/V3 で拾える範囲にとどまる。
 9. **`selectRepresentativeMode` を `gameCountByMode` なしで呼ぶ**ため、「金の間しか打っていないが全モード選択中」のプレイヤーは王座の間の分布と比較される。**モード別試合数が API から取れない**ことによる原理的な限界で、脚注（§3.3）で開示することしかできない。
