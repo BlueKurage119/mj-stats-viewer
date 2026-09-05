@@ -4,6 +4,7 @@ import { NO_GAMES_IN_PERIOD_MESSAGE } from '../filters/filterState';
 import { ElevatedCard } from '../components/md';
 import { LevelDetailCard } from './LevelDetailCard';
 import { RankCard } from './RankCard';
+import { PlaystyleCard } from './PlaystyleCard';
 import './summary.css';
 
 /**
@@ -33,6 +34,12 @@ export function SummaryPanel(): ReactElement {
             </div>
           </ElevatedCard>
           <RankCard state={scope.stats} numPlayers={scope.numPlayers} />
+          <PlaystyleCard
+            state={scope.stats}
+            distribution={scope.distribution}
+            modes={scope.filter?.modes ?? null}
+            numPlayers={scope.numPlayers}
+          />
         </>
       )}
     </div>

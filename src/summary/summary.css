@@ -549,3 +549,203 @@
     align-content: center;
   }
 }
+
+/*
+ * カード3（打ち筋）。issue-10 §4.8。
+ *
+ * R1（loading/ready/error で `.playstyle-card` の高さが完全一致すること）は
+ * 「実測値の焼き付け」ではなく「共有変数から ready 側・loading 側の両方の高さが決まる」
+ * ことで担保する（issue-9 で実測値焼き付け方式が2回壊れている。§3.4）。
+ * - `--tendency-row-height`: 傾向バー1行の min-height。行数は常に2（軸が null でも消さない）。
+ * - `--note-height`: 脚注の min-height。loading では modes が未確定で文言を出せず中身が
+ *   空になるため、ここを変数化しないと loading と ready で高さがズレる（§3.4-3）。
+ *
+ * 色はセクション色に依存しない（§3.6）。レーダーは単色（primary 系）の2変数のみで塗る。
+ */
+.playstyle-card {
+  display: block;
+  box-sizing: border-box;
+  --tendency-row-height: 36px;
+  --note-height: 20px;
+  --radar-stroke: var(--md-sys-color-primary);
+  --radar-fill: var(--md-sys-color-primary);
+}
+
+.playstyle-card__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+  container-name: playstyle-card;
+}
+
+.playstyle-card__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/*
+ * 600px 未満（縦積み側）の既定値。レーダー→傾向2行の順で縦に積む。
+ * 600px 以上は下の `@container playstyle-card (min-width: 600px)` が上書きする。
+ */
+.playstyle-card__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*
+ * error・unavailable: レーダー枠・傾向枠と同じ構造を（見えない状態で）描いて場所を確保した
+ * 上で、このメッセージを重ねて表示する。固定 min-height は使わない（#9 §4.7 と同じ手口）。
+ */
+.playstyle-card__body--message > .playstyle-card__radar,
+.playstyle-card__body--message > .playstyle-card__tendency {
+  visibility: hidden;
+}
+
+.playstyle-card__message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--md-sys-color-error);
+  margin: 0;
+  padding: 0 8px;
+}
+
+.playstyle-card__radar {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  align-self: center;
+}
+
+.playstyle-card__radar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.radar__ring {
+  stroke: var(--md-sys-color-outline-variant);
+  fill: none;
+}
+
+.radar__ring[data-mid='true'] {
+  stroke: var(--md-sys-color-outline);
+}
+
+.radar__spoke {
+  stroke: var(--md-sys-color-outline-variant);
+}
+
+.radar__area {
+  fill: var(--radar-fill);
+  fill-opacity: 0.24;
+  stroke: var(--radar-stroke);
+  stroke-width: 2;
+}
+
+.radar__dot {
+  fill: var(--radar-stroke);
+}
+
+.radar__label,
+.radar__value {
+  fill: var(--md-sys-color-on-surface-variant);
+  font-size: 9px;
+}
+
+.playstyle-card__tendency {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* R1 の生命線その1: ready 側・loading 側とも同じ変数から行の高さが決まる */
+.tendency__row {
+  min-height: var(--tendency-row-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tendency__pole {
+  color: var(--md-sys-color-on-surface-variant);
+  flex: 0 0 auto;
+}
+
+.tendency__bar {
+  display: flex;
+  gap: 2px;
+  flex: 1 1 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tendency__seg {
+  position: relative;
+  flex: 1 1 0;
+  /* 8px → 16px（オーナー指示・2026-09-06）。--tendency-row-height も 28 → 36 に連動させている */
+  height: 16px;
+  border-radius: 3px;
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.tendency__seg[data-active='true'] {
+  background: var(--md-sys-color-primary);
+}
+
+/*
+ * 現在位置の形状マーカー（色を唯一の伝達手段にしない。§3.6）。上向きの三角で、
+ * セグメント（高さ16px）の下端に収まる高さ10pxに抑え、行の高さを増やさない。
+ * **セグメント高さを変えたらここも必ず見直すこと**（はみ出すと行が伸びて R1 が落ちる）。
+ */
+.tendency__marker {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid var(--md-sys-color-primary);
+}
+
+/* R1 の生命線その2: loading では中身が空になるが、高さはこの変数から決まる（§3.4-3） */
+.playstyle-card__note {
+  min-height: var(--note-height);
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/*
+ * 【配置上の注意】このブロックは `.playstyle-card__*` の基本ルールより**後ろ**に置くこと。
+ * 詳細度が同じ（単一クラス）なので、基本ルールが後ろにあると後勝ちで打ち消される（#9 で実際に踏んだ）。
+ */
+@container playstyle-card (min-width: 600px) {
+  .playstyle-card__body {
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .playstyle-card__radar {
+    flex: 0 0 auto;
+  }
+
+  .playstyle-card__tendency {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
