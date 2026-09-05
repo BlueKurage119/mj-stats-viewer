@@ -237,6 +237,38 @@ describe('playstyleView: buildPlaystyleView (typeName の不在・aria・注記)
     expect(view!.allAxesMissing).toBe(true);
   });
 
+  /*
+   * 検収（2026-09-06）で「テストの次元が欠けている」と指摘された分。
+   * `allAxesMissing` は「レーダー全軸 null **かつ** 傾向全軸 null」の AND で、
+   * `&&` を `||` に変えるミューテーションが SURVIVED した（U17 が全 null しか見ていないため）。
+   * 三麻では「レーダーの分布だけ欠ける」混在ケースが実際に起こりうるので、両向きを固定する。
+   */
+  it('U19: レーダー全軸 null でも傾向が出せるなら allAxesMissing === false', () => {
+    // レーダーが使う 6 metric だけ分布を落とす。傾向は 追立率/放铳率/默听率/副露率/和了巡数 で成立する
+    const view = buildPlaystyleView({
+      extended: makeExtended(),
+      lookup: makeLookup({ 打点效率: null, 铳点损失: null, 和牌率: null, 立直率: null, 里宝率: null, 一发率: null }),
+      mode: 16,
+    });
+
+    expect(view.points.every((p) => p.value === null)).toBe(true);
+    expect(view.rows.some((r) => r.band !== null)).toBe(true);
+    expect(view.allAxesMissing).toBe(false);
+  });
+
+  it('U20: 傾向2軸が null でもレーダーが出せるなら allAxesMissing === false', () => {
+    // 傾向が使う 6 metric だけ分布を落とす。レーダーは 打点效率/铳点损失/和牌率/里宝率/一发率 で成立する
+    const view = buildPlaystyleView({
+      extended: makeExtended(),
+      lookup: makeLookup({ 立直率: null, 追立率: null, 放铳率: null, 默听率: null, 副露率: null, 和了巡数: null }),
+      mode: 16,
+    });
+
+    expect(view.rows.every((r) => r.band === null)).toBe(true);
+    expect(view.points.some((p) => p.value !== null)).toBe(true);
+    expect(view.allAxesMissing).toBe(false);
+  });
+
   it('U18: 一部 metric だけ返るとき calcTendency の項が減っても値が出る（副露率のみ）', () => {
     const view = buildPlaystyleView({
       extended: makeExtended({ 副露率: 2 }),

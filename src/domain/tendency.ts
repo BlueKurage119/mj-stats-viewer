@@ -19,7 +19,7 @@ function zScore(lookup: (metric: string) => MetricDistribution | null, metric: s
 }
 
 /** 単位 SD への正規化: Σ(values) / sqrt(項数)（項数1のときはその値そのもの） */
-function normalizedRenamed(values: readonly number[]): number {
+function normalized(values: readonly number[]): number {
   return values.reduce((a, b) => a + b, 0) / Math.sqrt(values.length);
 }
 
@@ -33,7 +33,7 @@ export function calcTendency(stats: TendencyInput, lookup: (metric: string) => M
     (v): v is number => v !== null,
   );
   const offenseDefense: TendencyAxis = offenseTerms.length
-    ? { value: normalizedRenamed(offenseTerms), band: toBand(normalizedRenamed(offenseTerms)) }
+    ? { value: normalized(offenseTerms), band: toBand(normalized(offenseTerms)) }
     : null;
 
   const zFuro = zScore(lookup, '副露率', stats.副露率);
@@ -43,7 +43,7 @@ export function calcTendency(stats: TendencyInput, lookup: (metric: string) => M
     (v): v is number => v !== null,
   );
   const concealedSpeed: TendencyAxis = speedTerms.length
-    ? { value: normalizedRenamed(speedTerms), band: toBand(normalizedRenamed(speedTerms)) }
+    ? { value: normalized(speedTerms), band: toBand(normalized(speedTerms)) }
     : null;
 
   return { offenseDefense, concealedSpeed };
