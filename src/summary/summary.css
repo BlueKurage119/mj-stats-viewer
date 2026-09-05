@@ -250,11 +250,17 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/*
+ * 常に1カラム（縦積み）にする。実ページのカード内容幅は 311px、2カラムに必要な幅は
+ * 312px（ドーナツ200 + gap16 + 凡例最小96）なので、実ページでは幅による分岐が必ず
+ * 発火し2カラムは一度も成立しない（issue-9 検収 P2-1 実測）。
+ * 幅で挙動を変えること自体が高さ不一致の原因だったため、分岐をやめて常に縦積みにする。
+ */
 .rank-card__chart {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .donut {
@@ -319,8 +325,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1 1 96px;
-  min-width: 96px;
+  width: 100%;
 }
 
 .rank-card__legend-item {
@@ -370,13 +375,32 @@
 }
 
 /*
- * 実測: 375px 幅で ready の本文（ドーナツ200px + gap12 + タイル100px）は 312px（issue-9 製造時実測）。
- * error はこの min-height で ready と同じ `.rank-card` 高さに揃える（§3.4 R1）。
+ * error・想定外形状: ドーナツ枠・凡例枠・タイル枠と同じ構造を（見えない状態で）描いて
+ * 場所を確保した上で、このメッセージを重ねて表示する。固定 min-height は使わない
+ * （三麻/四麻で ready の高さが違う以上、単一の固定値では両立しないため。§3.4 R1・P2-1 是正）。
  */
+.rank-card__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rank-card__body--message > .rank-card__chart,
+.rank-card__body--message > .rank-card__tiles {
+  visibility: hidden;
+}
+
 .rank-card__message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   color: var(--md-sys-color-error);
-  min-height: 312px;
   margin: 0;
+  padding: 0 8px;
 }
 
 .rank-card__skeleton {
@@ -399,9 +423,10 @@
   border-radius: 3px;
 }
 
+/* 実測: ready の凡例1行（ラベル+値、md-typescale-body-medium 相当）の高さは 23px（issue-9 検収 P2-1 実測） */
 .rank-card__legend-item .rank-card__skeleton:last-child {
   width: 96px;
-  height: 16px;
+  height: 23px;
   flex: 1 1 auto;
 }
 

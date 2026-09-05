@@ -126,15 +126,35 @@ export function RankGallery(): ReactElement {
 
   return (
     <>
-      {/* 高さ計測プローブ（§4.8）。横パディングを持つ祖先の外側に置く（issue-8 §4.6 の教訓）。 */}
+      {/*
+        高さ計測プローブ（§4.8）。横パディングを持つ祖先の外側に置く（issue-8 §4.6 の教訓）。
+        幅は実ページと同じカード内容幅（311px）で測る（issue-9 検収 P2-1 是正）。
+        実ページ: 375px 幅 − ページ左右パディング32px（shell.css）− カード左右パディング32px
+        （.rank-card__inner）= 311px。プローブに与える幅は「カード自身の幅」なので
+        375 − 32（ページパディングのみ）= 343px（issue-8 §4.6 で使った値と同じ考え方）。
+        以前のプローブはこの幅制約が無く、実ページより広い幅で測っていたため
+        `.rank-card__chart` の2カラム分岐（当時の実装）を検知できなかった（B3 が見逃した原因）。
+      */}
       <div data-testid="rank-height-probe">
         {HEIGHT_PROBES_4P.map(({ dataState, state }) => (
-          <div key={`4p-${dataState}`} data-testid="rank-height-probe-item" data-players="4" data-state={dataState}>
+          <div
+            key={`4p-${dataState}`}
+            data-testid="rank-height-probe-item"
+            data-players="4"
+            data-state={dataState}
+            style={{ width: 343 }}
+          >
             <RankCard state={state} numPlayers={4} />
           </div>
         ))}
         {HEIGHT_PROBES_3P.map(({ dataState, state }) => (
-          <div key={`3p-${dataState}`} data-testid="rank-height-probe-item" data-players="3" data-state={dataState}>
+          <div
+            key={`3p-${dataState}`}
+            data-testid="rank-height-probe-item"
+            data-players="3"
+            data-state={dataState}
+            style={{ width: 343 }}
+          >
             <RankCard state={state} numPlayers={3} />
           </div>
         ))}

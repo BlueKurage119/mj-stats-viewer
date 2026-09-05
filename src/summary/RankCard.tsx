@@ -87,50 +87,51 @@ export function RankCard(props: RankCardProps): ReactElement {
       <div className="rank-card__inner">
         <h2 className="rank-card__title md-typescale-title-medium">成績</h2>
 
-        {message !== null ? (
-          <p className="rank-card__message">{message}</p>
-        ) : (
-          <>
-            <div className="rank-card__chart">
-              <Donut
-                segments={view !== null ? segmentsFromView(view) : []}
-                ariaLabel={view !== null ? view.ariaLabel : '順位分布'}
-                placeholder={view === null}
-              >
-                {view !== null ? (
-                  <div className="rank-card__center">
-                    <span className="rank-card__games md-typescale-headline-small numeric" data-testid="rank-games">
-                      {view.gameCountText}
+        {/*
+          error・想定外形状のときも、ドーナツ枠・凡例枠・タイル枠と同じ構造を描いて場所を
+          確保した上でメッセージを重ねる（loading と同じプレースホルダ形状を再利用する）。
+          こうすることで loading / ready / error の3状態が構造的に同じ高さになる（R1）。
+          詳細: docs/design/issue-9-rank-donut.md §3.4（P2-1 是正）
+        */}
+        <div className={`rank-card__body${message !== null ? ' rank-card__body--message' : ''}`}>
+          <div className="rank-card__chart">
+            <Donut
+              segments={view !== null ? segmentsFromView(view) : []}
+              ariaLabel={view !== null ? view.ariaLabel : '順位分布'}
+              placeholder={view === null}
+            >
+              {view !== null ? (
+                <div className="rank-card__center">
+                  <span className="rank-card__games md-typescale-headline-small numeric" data-testid="rank-games">
+                    {view.gameCountText}
+                  </span>
+                  <span className="rank-card__games-unit md-typescale-label-small">戦</span>
+                  {view.roundCountText !== null && (
+                    <span className="rank-card__rounds md-typescale-label-small numeric" data-testid="rank-rounds">
+                      {view.roundCountText}局
                     </span>
-                    <span className="rank-card__games-unit md-typescale-label-small">戦</span>
-                    {view.roundCountText !== null && (
-                      <span
-                        className="rank-card__rounds md-typescale-label-small numeric"
-                        data-testid="rank-rounds"
-                      >
-                        {view.roundCountText}局
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <Skeleton />
-                )}
-              </Donut>
+                  )}
+                </div>
+              ) : (
+                <Skeleton />
+              )}
+            </Donut>
 
-              <ul className="rank-card__legend" data-testid="rank-legend">
-                {legendItems.map((slice, i) => (
-                  <LegendItem key={slice?.key ?? i} slice={slice} rank={i + 1} />
-                ))}
-              </ul>
-            </div>
-
-            <dl className="rank-card__tiles" data-testid="rank-tiles">
-              {tileItems.map((tile, i) => (
-                <TileItem key={tile?.key ?? i} tile={tile} />
+            <ul className="rank-card__legend" data-testid="rank-legend">
+              {legendItems.map((slice, i) => (
+                <LegendItem key={slice?.key ?? i} slice={slice} rank={i + 1} />
               ))}
-            </dl>
-          </>
-        )}
+            </ul>
+          </div>
+
+          <dl className="rank-card__tiles" data-testid="rank-tiles">
+            {tileItems.map((tile, i) => (
+              <TileItem key={tile?.key ?? i} tile={tile} />
+            ))}
+          </dl>
+
+          {message !== null && <p className="rank-card__message">{message}</p>}
+        </div>
       </div>
     </ElevatedCard>
   );
