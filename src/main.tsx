@@ -17,6 +17,10 @@ async function bootstrap() {
         const { ComponentGallery } = await import('./dev/ComponentGallery');
         return <ComponentGallery />;
       },
+      '#/__identity': async () => {
+        const { IdentityGallery } = await import('./dev/IdentityGallery');
+        return <IdentityGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {

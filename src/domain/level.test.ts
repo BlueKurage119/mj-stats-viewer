@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatAdjustedScore,
   formatLevelWithDelta,
+  getLevelMajorTag,
   getLevelTagFromId,
   getMaxPoint,
   getNextLevel,
@@ -23,6 +24,18 @@ describe('level: タグ', () => {
   it('getLevelTagFromId: 旧魂天は数字なし、現行魂天は数字あり', () => {
     expect(getLevelTagFromId(10601)).toBe('魂天');
     expect(getLevelTagFromId(10703)).toBe('魂天3');
+  });
+});
+
+describe('level: 主要部ラベル（getLevelMajorTag）', () => {
+  it('通常段位は主要部ラベルのみ返す（数字を含まない）', () => {
+    expect(getLevelMajorTag(parseLevelId(10302))).toBe('雀傑');
+    expect(getLevelMajorTag(parseLevelId(10101))).toBe('初心');
+  });
+
+  it('魂天は majorRank 6・7 のどちらも「魂天」', () => {
+    expect(getLevelMajorTag(parseLevelId(10701))).toBe('魂天');
+    expect(getLevelMajorTag(parseLevelId(10601))).toBe('魂天');
   });
 });
 

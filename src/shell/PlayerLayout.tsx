@@ -16,7 +16,9 @@ import { useCurrentIdentity } from '../filters/useCurrentIdentity';
 import { useGlobalFilter } from '../filters/useGlobalFilter';
 import { useFilteredStats } from '../filters/useFilteredStats';
 import { FilterBar } from '../filters/FilterBar';
-import { formatLevelWithDelta } from '../domain/level';
+import { IdentityCard } from '../summary/IdentityCard';
+import { effectiveLevelPoint } from '../summary/identityView';
+import { useRankTheme } from '../theme/useRankTheme';
 import type { PlayerScope } from '../filters/playerScope';
 import type { NumPlayers } from '../api';
 import './shell.css';
@@ -80,6 +82,11 @@ function PlayerLayoutInner({
   const { filter, setModes, setPeriod } = useGlobalFilter(numPlayers, identity);
   const stats = useFilteredStats(numPlayers, playerId, filter);
 
+  // 段位シード切替に渡す levelId は正規化後の値（issue-8 §1.4・§3.4）。
+  // 表示中の段位タグ（IdentityCard）とテーマ色が食い違わないようにする。
+  const normalizedLevelId = identity.kind === 'ready' ? effectiveLevelPoint(identity.identity.level).levelId : null;
+  useRankTheme(normalizedLevelId);
+
   const scope: PlayerScope = {
     numPlayers,
     playerId,
@@ -90,24 +97,9 @@ function PlayerLayoutInner({
     setPeriod,
   };
 
-  let nicknameDisplay = `プレイヤー: ${rawId}`;
-  let levelDisplay = '読み込み中...';
-
-  if (identity.kind === 'ready') {
-    nicknameDisplay = identity.identity.nickname;
-    levelDisplay = formatLevelWithDelta(identity.identity.level);
-  } else if (identity.kind === 'notFound') {
-    levelDisplay = 'プレイヤーが見つかりませんでした';
-  } else if (identity.kind === 'error') {
-    levelDisplay = identity.message;
-  }
-
   const heroContent = (
     <div className="player-hero">
-      <div className="md-typescale-headline-small">{nicknameDisplay}</div>
-      <div className="md-typescale-body-medium" data-testid="identity-level">
-        {levelDisplay}
-      </div>
+      <IdentityCard state={identity} fallbackName={`プレイヤー: ${rawId}`} />
       <FilterBar
         numPlayers={numPlayers}
         filter={filter}

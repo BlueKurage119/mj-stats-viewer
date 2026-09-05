@@ -112,6 +112,12 @@
   flex: 1;
 }
 
+.player-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .layered-sheet__hero {
   position: sticky;
   top: var(--app-header-height, 64px);
