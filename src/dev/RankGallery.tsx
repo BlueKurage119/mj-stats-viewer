@@ -121,6 +121,19 @@ const HEIGHT_PROBES_3P: readonly { readonly dataState: string; readonly state: F
   { dataState: 'ready', state: READY_3P },
 ];
 
+/**
+ * 基準幅（600px、`@container rank-card (min-width: 600px)`）の両側を測る2種の幅。
+ * issue-8・issue-9 で計2回「プローブが実ページとズレていて検出できない」事故が
+ * 起きているため、両レイアウトを別々に測れるようにする（統括担当指示）。
+ *
+ * - stack（縦積み側）: 343px = 実ページ最小幅 375px − ページ左右パディング32px（shell.css）。
+ *   `.rank-card`（プローブに渡す width と同じ）自身の幅なので `@container` の条件にそのまま効く。
+ * - row（3カラム側）: 700px = 基準の600pxを余裕をもって超える値。ちょうど600pxでは
+ *   丸め誤差で境界を跨ぐ恐れがあるため境界値そのものは測らない。
+ */
+const PROBE_WIDTH_STACK = 343;
+const PROBE_WIDTH_ROW = 700;
+
 export function RankGallery(): ReactElement {
   const { modeSetting, setModeSetting } = useTheme();
 
@@ -128,32 +141,55 @@ export function RankGallery(): ReactElement {
     <>
       {/*
         高さ計測プローブ（§4.8）。横パディングを持つ祖先の外側に置く（issue-8 §4.6 の教訓）。
-        幅は実ページと同じカード内容幅（311px）で測る（issue-9 検収 P2-1 是正）。
-        実ページ: 375px 幅 − ページ左右パディング32px（shell.css）− カード左右パディング32px
-        （.rank-card__inner）= 311px。プローブに与える幅は「カード自身の幅」なので
-        375 − 32（ページパディングのみ）= 343px（issue-8 §4.6 で使った値と同じ考え方）。
-        以前のプローブはこの幅制約が無く、実ページより広い幅で測っていたため
-        `.rank-card__chart` の2カラム分岐（当時の実装）を検知できなかった（B3 が見逃した原因）。
+        基準幅（600px）の両側を、実ページ相当の2種の幅（PROBE_WIDTH_STACK / PROBE_WIDTH_ROW）
+        で測る。レイアウト切替は `.rank-card__inner` の `container-type: inline-size` による
+        `@container` なので、ここで与える `width` が `.rank-card` 自身の実効幅として直接効く。
       */}
       <div data-testid="rank-height-probe">
         {HEIGHT_PROBES_4P.map(({ dataState, state }) => (
           <div
-            key={`4p-${dataState}`}
+            key={`stack-4p-${dataState}`}
             data-testid="rank-height-probe-item"
             data-players="4"
+            data-layout="stack"
             data-state={dataState}
-            style={{ width: 343 }}
+            style={{ width: PROBE_WIDTH_STACK }}
           >
             <RankCard state={state} numPlayers={4} />
           </div>
         ))}
         {HEIGHT_PROBES_3P.map(({ dataState, state }) => (
           <div
-            key={`3p-${dataState}`}
+            key={`stack-3p-${dataState}`}
             data-testid="rank-height-probe-item"
             data-players="3"
+            data-layout="stack"
             data-state={dataState}
-            style={{ width: 343 }}
+            style={{ width: PROBE_WIDTH_STACK }}
+          >
+            <RankCard state={state} numPlayers={3} />
+          </div>
+        ))}
+        {HEIGHT_PROBES_4P.map(({ dataState, state }) => (
+          <div
+            key={`row-4p-${dataState}`}
+            data-testid="rank-height-probe-item"
+            data-players="4"
+            data-layout="row"
+            data-state={dataState}
+            style={{ width: PROBE_WIDTH_ROW }}
+          >
+            <RankCard state={state} numPlayers={4} />
+          </div>
+        ))}
+        {HEIGHT_PROBES_3P.map(({ dataState, state }) => (
+          <div
+            key={`row-3p-${dataState}`}
+            data-testid="rank-height-probe-item"
+            data-players="3"
+            data-layout="row"
+            data-state={dataState}
+            style={{ width: PROBE_WIDTH_ROW }}
           >
             <RankCard state={state} numPlayers={3} />
           </div>
@@ -175,7 +211,7 @@ export function RankGallery(): ReactElement {
           </div>
         </section>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 375 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 900 }}>
           {ENTRIES.map((entry) => (
             <div
               key={entry.label}

@@ -32,6 +32,8 @@ export interface RankSlice {
   readonly label: string; // '1位'
   readonly rate: number; // 0..1（API 値そのまま）
   readonly percentText: string; // '20.4'（% 記号は含めない）
+  readonly count: number; // rate * gameCount を最大剰余法で丸めた実回数。合計は gameCount に一致する
+  readonly countText: string; // '11'（3桁区切り。回数記号は含めない）
   readonly colorToken: RankColorKey;
   readonly arcLength: number | null; // stroke-dasharray の第1値。rate === 0 のとき null（弧を描かない）
   readonly arcOffset: number; // stroke-dashoffset に入れる値（負値）
@@ -64,6 +66,34 @@ function percentText(rate: number): string {
 }
 
 /**
+ * `rank_rates[i] * gameCount` を実回数に変換する（凡例の「回数表示」§3.5 改訂）。
+ *
+ * 各順位を単純に四捨五入すると合計が `gameCount` と一致しないことがある
+ * （例: rates=[0.15,0.15,0.15,0.55], gameCount=10 → 単純四捨五入だと 2+2+2+6=12 ≠ 10。
+ * `0.5` の丸め方向が全て切り上げに転ぶケースで起きる）。
+ * ここでは**最大剰余法**（Largest Remainder Method）を使う: まず全員を切り捨て、
+ * 端数の大きい順に 1 ずつ配って合計を `gameCount` に一致させる。
+ * `rank_rates` の合計が丸めの都合で 1.0 ちょうどにならない場合でも、
+ * 配分先が `rank_rates.length` を超えないため破綻しない。
+ */
+function rankCounts(rates: readonly number[], gameCount: number): readonly number[] {
+  const raw = rates.map((rate) => rate * gameCount);
+  const floors = raw.map((v) => Math.floor(v));
+  const flooredTotal = floors.reduce((sum, v) => sum + v, 0);
+  const remainder = Math.max(0, Math.round(gameCount - flooredTotal));
+
+  const orderByFractionDesc = raw
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac);
+
+  const counts = [...floors];
+  for (let k = 0; k < remainder && k < orderByFractionDesc.length; k++) {
+    counts[orderByFractionDesc[k].i] += 1;
+  }
+  return counts;
+}
+
+/**
  * rank_rates が空・長さが 3/4 以外・rank_avg_score と長さが違う場合は null を返す
  * （API の想定外形状。カードは「データを表示できません」を出す）
  */
@@ -78,6 +108,7 @@ export function buildRankView(input: {
   if (stats.rank_avg_score.length !== rates.length) return null;
 
   const colorTokens = COLOR_TOKENS_BY_LENGTH[rates.length as 3 | 4];
+  const counts = rankCounts(rates, stats.gameCount);
 
   let cumulative = 0;
   const slices: RankSlice[] = rates.map((rate, i) => {
@@ -92,6 +123,8 @@ export function buildRankView(input: {
       label: RANK_LABELS[i],
       rate,
       percentText: percentText(rate),
+      count: counts[i],
+      countText: counts[i].toLocaleString('ja-JP'),
       colorToken: colorTokens[i],
       arcLength,
       arcOffset,

@@ -180,4 +180,35 @@ describe('rankView: buildRankView', () => {
     expect(view!.gameCountText).toBe('12,345');
     expect(view!.roundCountText).toBe('56,789');
   });
+
+  it('U18: 四麻の実レスポンス値(54戦)の回数が rank_rates×gameCountの最大剰余法で 11/8/21/14 になる', () => {
+    const view = buildRankView({ stats: make4pStats(), extended: null });
+    expect(view!.slices.map((s) => s.count)).toEqual([11, 8, 21, 14]);
+    expect(view!.slices.map((s) => s.countText)).toEqual(['11', '8', '21', '14']);
+    expect(view!.slices.reduce((sum, s) => sum + s.count, 0)).toBe(54);
+  });
+
+  it('U19: 単純な四捨五入では合計が gameCount と一致しないケースでも、最大剰余法で合計は一致する', () => {
+    // 対照実験: rate*gameCount がすべて xx.5 になるケース。Math.round は .5 を常に切り上げるため、
+    // 単純に各順位を四捨五入すると 2+2+2+6=12 ≠ 10 になり合計が壊れる。
+    const stats = make4pStats({
+      rank_rates: [0.15, 0.15, 0.15, 0.55],
+      rank_avg_score: [40000, 30000, 20000, 10000],
+      gameCount: 10,
+    });
+    const naiveSum = stats.rank_rates.reduce((sum, rate) => sum + Math.round(rate * stats.gameCount), 0);
+    expect(naiveSum).not.toBe(stats.gameCount); // 単純四捨五入では合わないことの確認
+
+    const view = buildRankView({ stats, extended: null });
+    const total = view!.slices.reduce((sum, s) => sum + s.count, 0);
+    expect(total).toBe(stats.gameCount);
+  });
+
+  it('U20: rate が 0 のスライスの回数は 0 になる（0%を含む状態）', () => {
+    const stats = make4pStats({ rank_rates: [0.6, 0.4, 0, 0], rank_avg_score: [40000, 30000, 10000, 5000], gameCount: 5 });
+    const view = buildRankView({ stats, extended: null });
+    expect(view!.slices[2].count).toBe(0);
+    expect(view!.slices[3].count).toBe(0);
+    expect(view!.slices.reduce((sum, s) => sum + s.count, 0)).toBe(5);
+  });
 });

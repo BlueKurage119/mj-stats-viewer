@@ -49,8 +49,11 @@ function LegendItem({ slice, rank }: { slice: RankSlice | null; rank: number }):
         aria-hidden="true"
         style={{ '--swatch': `var(--md-custom-color-${slice.colorToken})` } as CSSProperties}
       />
-      <span className="rank-card__legend-label">{slice.label}</span>
-      <span className="rank-card__legend-value numeric">{slice.percentText}%</span>
+      <span className="rank-card__legend-text">
+        <span className="rank-card__legend-label">{slice.label}</span>
+        <span className="rank-card__legend-count numeric">{slice.countText}回</span>
+        <span className="rank-card__legend-value numeric">({slice.percentText}%)</span>
+      </span>
     </li>
   );
 }
