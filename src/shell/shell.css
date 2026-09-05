@@ -125,8 +125,26 @@
   background-color: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
   min-height: 180px;
-  padding: 24px 16px 48px;
+  /* 左右は .layered-sheet__layer と同じ規則で中身を止める（--content-max-width の定義を参照） */
+  padding: 24px max(16px, (100% - var(--content-max-width, 1040px)) / 2) 48px;
   box-sizing: border-box;
+}
+
+/*
+ * コンテンツの最大幅。**背景（シートの地色・ヒーローのテーマ背景）は画面幅いっぱいのまま、
+ * 中身だけを止める**ため、要素の max-width ではなく padding-inline で実現する（DOM を増やさない）。
+ *
+ * 導入の経緯（2026-09-06・issue-9 のオーナー指摘「第3カラムがスカスカ」）: 上限が無かったため
+ * ビューポート 1385px でカードが 1273px まで伸び、中身は伸びないので凡例カラム 561px に対し
+ * 内容 220px、タイル1枚 408px に対し内容 110px という空白だらけの見た目になっていた。
+ * 「第3カラムだけの問題」ではなく器側の問題で、カード1（#8）や後続の #10〜#12 にも同じく効く。
+ *
+ * 値の根拠: カード2の3カラムが必要とする幅は ドーナツ240 + gap16 + 凡例230 + gap16 + タイル200
+ * ＋ カード内padding32 ≒ 735px。1040px なら窮屈にならず、かつ1行が長くなりすぎない。
+ */
+.layered-sheet__hero,
+.layered-sheet__layer {
+  --content-max-width: 1040px;
 }
 
 .layered-sheet__layer {
@@ -137,7 +155,7 @@
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   min-height: 100svh;
-  padding: 24px 16px;
+  padding: 24px max(16px, (100% - var(--content-max-width)) / 2);
   box-sizing: border-box;
   padding-bottom: calc(80px + 16px + env(safe-area-inset-bottom, 0px));
   /* タブ遷移アニメーション(translateX)がページの水平スクロール幅を一瞬超え、

@@ -2,10 +2,11 @@ import {
   argbFromHex,
   hexFromArgb,
   themeFromSourceColor,
+  TonalPalette,
   type CustomColorGroup,
   type Theme,
 } from '@material/material-color-utilities';
-import { SECTION_COLORS, type SectionKey } from './seeds';
+import { RANK_COLOR_SOURCES, RANK_COLOR_TONES, SECTION_COLORS, type RankColorKey, type SectionKey } from './seeds';
 
 /**
  * `@material/material-color-utilities` 0.3.0 には `applyTheme()` が存在するが、
@@ -24,6 +25,21 @@ const customColorDefs = sectionKeys.map((key) => ({
 
 /** シードHEXごとにテーマ生成をメモ化する（取りうるシードは5種のみ） */
 const themeCache = new Map<string, Theme>();
+
+const rankColorKeys = Object.keys(RANK_COLOR_SOURCES) as RankColorKey[];
+
+/** 色相ソースごとの TonalPalette をメモ化する（取りうるソースは4種のみ） */
+const rankPaletteCache = new Map<string, TonalPalette>();
+
+function rankPalette(key: RankColorKey): TonalPalette {
+  const source = RANK_COLOR_SOURCES[key];
+  let palette = rankPaletteCache.get(source);
+  if (!palette) {
+    palette = TonalPalette.fromInt(argbFromHex(source));
+    rankPaletteCache.set(source, palette);
+  }
+  return palette;
+}
 
 function themeForSeed(seed: string): Theme {
   let theme = themeCache.get(seed);
@@ -123,6 +139,13 @@ export function applyMd3Theme(seed: string, dark: boolean): void {
     root.style.setProperty(`--md-custom-color-on-${key}`, hexFromArgb(roles.onColor));
     root.style.setProperty(`--md-custom-color-${key}-container`, hexFromArgb(roles.colorContainer));
     root.style.setProperty(`--md-custom-color-on-${key}-container`, hexFromArgb(roles.onColorContainer));
+  }
+
+  // 順位色 → --md-custom-color-rank-1..4（段位シードから独立。セクション色とは別系統。設計書 issue-9 §3.2）
+  const rankTones = dark ? RANK_COLOR_TONES.dark : RANK_COLOR_TONES.light;
+  for (const key of rankColorKeys) {
+    const palette = rankPalette(key);
+    root.style.setProperty(`--md-custom-color-${key}`, hexFromArgb(palette.tone(rankTones[key])));
   }
 
   // ネイティブUI・スクロールバーの追従と FOUC 対策スクリプトとの整合

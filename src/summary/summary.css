@@ -226,3 +226,326 @@
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
+
+/*
+ * カード2（成績・順位分布ドーナツ）。issue-9 §4.5・§4.7。
+ * 高さの規律（issue-8 §5.3 H1 と同じ）: loading / ready / error で `.rank-card` の高さを一致させる。
+ *
+ * 【2026-09-06 レイアウト再設計・オーナー差し戻し】
+ * 検収 P2-1（実ページ幅で3状態の高さが揃わない）を受けて一度「常に1カラム」に是正したが、
+ * オーナーから「1カラム固定はスマホ以外で間延びする」と差し戻された。この指摘は正しい。
+ * P2-1 の真因は「幅で挙動が変わること」ではなく「スケルトンの各行の高さが ready の対応行と
+ * 実測でズレていたこと」だった（`document.fonts.ready` 前に測っていた疑いがある値を含む）。
+ * 行の高さを ready に正しく合わせれば、どのレイアウトでも高さは一致する。
+ * したがって 1 カラム固定はやめ、600px 未満は縦積み・600px 以上はドーナツ｜凡例｜タイルの
+ * 3カラムに戻す（オーナー確定仕様）。
+ *
+ * 切り替え基準に `@container` を採用した理由: このカードは `.layered-sheet__layer` に
+ * max-width が無いページに置かれるため、ビューポート幅のメディアクエリでもほぼ同じ結果には
+ * なるが、`@container` なら「カード自身の実効幅」で切り替わるため、将来カードが別の幅の
+ * シェル（2カラムレイアウト等）に置かれても意図通りに動く。dev ギャラリーの高さプローブと
+ * 実ページ（375px 幅・840px 以上でナビレール分オフセットが乗る幅）の両方で、コンテナクエリの
+ * 発火が実測どおりであることを確認済み（§9 実測）。
+ */
+
+.rank-card {
+  display: block;
+  box-sizing: border-box;
+}
+
+.rank-card__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+  container-name: rank-card;
+}
+
+.rank-card__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/*
+ * 600px 未満（縦積み側）の既定値。ドーナツ→凡例の順で縦に積む。
+ * 600px 以上は下の `@container rank-card (min-width: 600px)` が上書きする。
+ */
+.rank-card__chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/*
+ * 200px → 240px に拡大（オーナー指示「もう一回り大きく」）。
+ * 375px 幅（縦積み側）のカード内容幅は 311px なので、`max-width` を上げても実際に
+ * 描画される幅は 311px 止まりで、カードが過大にならない範囲であることを実測済み（§9）。
+ */
+.donut {
+  position: relative;
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+}
+
+.donut__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.donut__track {
+  stroke: var(--md-sys-color-surface-container-highest);
+}
+
+.donut__seg {
+  transition: stroke-dasharray 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donut__seg {
+    transition: none;
+  }
+}
+
+.donut__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.rank-card__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+}
+
+.rank-card__games {
+  color: var(--md-sys-color-on-surface);
+}
+
+.rank-card__games-unit,
+.rank-card__rounds {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+
+  /*
+   * 凡例1行の高さ。**ready と loading（スケルトン）の両方がこの1つの値から決まる**
+   * ことが R1（§3.4: 同じ幅なら3状態の高さが一致する）の生命線。
+   *
+   * 以前はスケルトン側にだけ実測値（23px → 24px）を焼き付けていたが、ready 側は
+   * フォント由来の高さなので、タイポグラフィや凡例の要素構成（回数表示の追加など）が
+   * 変わるたびにズレて R1 が壊れた（実際に2回踏んだ）。値を1箇所に集約し、
+   * ready 側は min-height でこの高さまで押し広げることで、フォントに依存せず一致させる。
+   */
+  --legend-row-height: 24px;
+}
+
+.rank-card__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--legend-row-height);
+}
+
+.rank-card__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--swatch);
+  flex: 0 0 auto;
+}
+
+/*
+ * 順位ラベル・回数・パーセンテージを近づける（オーナー指示。旧実装は
+ * `.rank-card__legend-label` に `flex:1 1 auto` を与えて右端まで押し広げていたため、
+ * ラベルと数値が離れて対応が読み取りづらかった）。`space-between` をやめ、
+ * ラベル→回数→パーセンテージを詰めて1グループにする。
+ */
+.rank-card__legend-text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.rank-card__legend-label {
+  color: var(--md-sys-color-on-surface);
+}
+
+.rank-card__legend-count {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__legend-value {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+/*
+ * 600px 以上（3カラム側）: ドーナツ｜凡例｜タイルを横並びにする（オーナー確定仕様）。
+ * DOM は変えず、`.rank-card__body`（chart・tiles の2要素）と `.rank-card__chart`
+ * （donut・legend の2要素）をそれぞれ横並びにすることで見た目上の3カラムを作る。
+ * タイルは縦1列（5項目）に積む。
+ *
+ * R1（loading/ready/error の高さ一致）はこの分岐の内側でも成立する: 行の並べ方
+ * （column/row）が変わるだけで各要素自体の高さは変わらないため、3状態間の高さの
+ * 一致は幅（縦積み/3カラムのどちらか）に依存しない。B3 は両方の幅で実測して確認する。
+ */
+
+.rank-card__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rank-card__tile dt {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__tile dd {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+/*
+ * error・想定外形状: ドーナツ枠・凡例枠・タイル枠と同じ構造を（見えない状態で）描いて
+ * 場所を確保した上で、このメッセージを重ねて表示する。固定 min-height は使わない
+ * （三麻/四麻で ready の高さが違う以上、単一の固定値では両立しないため。§3.4 R1・P2-1 是正）。
+ */
+.rank-card__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rank-card__body--message > .rank-card__chart,
+.rank-card__body--message > .rank-card__tiles {
+  visibility: hidden;
+}
+
+.rank-card__message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--md-sys-color-error);
+  margin: 0;
+  padding: 0 8px;
+}
+
+.rank-card__skeleton {
+  display: block;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+}
+
+/* 中央の穴のプレースホルダ（読み込み中の「◯戦」相当） */
+.donut__center .rank-card__skeleton {
+  width: 64px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+/* 凡例1行 = スウォッチのプレースホルダ + ラベル/値のプレースホルダ */
+.rank-card__legend-item .rank-card__skeleton:first-child {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/*
+ * ready 側と同じ `--legend-row-height` から高さを取る（実測値を焼き付けない）。
+ * 詳細は `.rank-card__legend` の同変数のコメントを参照。
+ */
+.rank-card__legend-item .rank-card__skeleton:last-child {
+  width: 96px;
+  height: var(--legend-row-height);
+  flex: 1 1 auto;
+}
+
+/* 実測: ready のタイル本文（dt+dd、gap 2px）の高さは 46px（issue-9 製造時実測） */
+.rank-card__tile .rank-card__skeleton {
+  width: 100%;
+  height: 46px;
+}
+
+/*
+ * 【配置上の注意】このブロックは `.rank-card__*` の基本ルールより**後ろ**に置くこと。
+ * 詳細度が同じ（単一クラス）なので、基本ルールが後ろにあると後勝ちでコンテナクエリが
+ * 打ち消される。実際に `.rank-card__body { flex-direction: column }` が後ろにあったため
+ * 3カラム化が効かず、タイルだけが下の行に落ちていた（2026-09-06 実測で発見）。
+ */
+@container rank-card (min-width: 600px) {
+  .rank-card__body {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  /*
+   * 各カラムは**中身の幅に合わせる**（`flex: 0 1 auto`）。余った横幅は
+   * `justify-content: space-between` でカラムとカラムの「間」に逃がす。
+   *
+   * 以前は `flex: 2 1 0` / `1 1 0` で余白を各カラムに比例配分していたため、中身が伸びない
+   * 凡例やタイルの内側が空白だらけになっていた（オーナー指摘「第3カラムがスカスカ」。
+   * 実測: 凡例カラム 405px に対し中身 230px、タイル 331px に対し中身 110px）。
+   * 空白を列の内側ではなく列の間に置くと、意図した余白として読める。
+   */
+  /* ドーナツと凡例は中身の幅で足りる。余った横幅はタイルに回す */
+  .rank-card__chart {
+    flex: 0 1 auto;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .rank-card__legend {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  /*
+   * タイルは残り幅を受け取り、**幅に応じて2〜3段に積む**（オーナー指示）。
+   * 以前は 1 カラム固定だったため、幅の広い画面で「1枚 331px の箱に中身 110px」という
+   * スカスカな縦長リストになっていた。auto-fit にすると 1040px 幅のカードで3列（3+2）、
+   * 狭くなるにつれ 2列 → 1列と自然に落ちる。170px は「5枚が 3+2 に割れる」ことを実測で選んだ値（140px だと4列になり2段目に1枚だけ残る）。
+   */
+  .rank-card__tiles {
+    flex: 1 1 auto;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    align-content: center;
+  }
+}

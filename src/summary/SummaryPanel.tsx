@@ -3,6 +3,7 @@ import { usePlayerScope } from '../filters/playerScope';
 import { NO_GAMES_IN_PERIOD_MESSAGE } from '../filters/filterState';
 import { ElevatedCard } from '../components/md';
 import { LevelDetailCard } from './LevelDetailCard';
+import { RankCard } from './RankCard';
 import './summary.css';
 
 /**
@@ -24,12 +25,15 @@ export function SummaryPanel(): ReactElement {
       {scope.stats.kind === 'empty' ? (
         <p className="md-typescale-body-medium">{NO_GAMES_IN_PERIOD_MESSAGE}</p>
       ) : (
-        <ElevatedCard className="summary-panel__rank-graph">
-          <div className="summary-panel__rank-graph-inner" data-testid="rank-graph-placeholder">
-            <h2 className="md-typescale-title-medium">順位グラフ</h2>
-            <p className="md-typescale-body-medium">対局履歴データの利用許諾後に実装します（#17）</p>
-          </div>
-        </ElevatedCard>
+        <>
+          <ElevatedCard className="summary-panel__rank-graph">
+            <div className="summary-panel__rank-graph-inner" data-testid="rank-graph-placeholder">
+              <h2 className="md-typescale-title-medium">順位グラフ</h2>
+              <p className="md-typescale-body-medium">対局履歴データの利用許諾後に実装します（#17）</p>
+            </div>
+          </ElevatedCard>
+          <RankCard state={scope.stats} numPlayers={scope.numPlayers} />
+        </>
       )}
     </div>
   );
