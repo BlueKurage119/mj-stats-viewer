@@ -84,7 +84,7 @@
 - 背景コントラストは light 3.48〜6.89 / dark 7.09〜13.23 で全色 3:1 以上（暫定配色より良好）
 - 相互コントラスト最小は 1.23（金/銅）で暫定配色と同じ。**スライス間の隙間（§3.3）は必須のまま**
 - メダル明度順（金>銀>銅）にトーンを組み替える案も実測したが、背景コントラストが 2.83 まで落ちて 3:1 を割るため**不採用**。既存トーンを維持する
-- **light の銀は `#50585f`（暗いスレート）になる。** 白背景で「銀らしい明るさ」を出すとコントラスト 3:1 を割るための原理的な制約。青寄せの要否は UI 検証 V1 で判断する
+- **light の銀は `#50585f`（暗いスレート）になる。** 白背景で「銀らしい明るさ」を出すとコントラスト 3:1 を割るための原理的な制約。**【2026-09-05 解決】UI検証 V1 でオーナーが「ライト・ダークいずれも悪くない」と確認済み**（§7.4）。青寄せは不要
 
 実測コントラスト（背景 = `surface-container-low` = `ElevatedCard` の地色。5シードでの振れ幅は ±0.03 以内）:
 
@@ -166,7 +166,7 @@ export type FilteredStatsState =
 
 ### 1.9 実物確認できなかったもの
 
-- **amae-koromo（本家）の順位色の実際の値**。CLAUDE.md「API利用の方針」と本 Issue の指示により**外部アクセスを行っていない**ため、リポジトリ内に情報源が無い（`docs/` を全文検索したが順位色の記述は無い）。§3.2 の値は**本設計の独自判断**であり、「本家準拠」の要件は**未充足のまま暫定値で進める**。§8.4 V1 でオーナーに確認を委託する。
+- **amae-koromo（本家）の順位色の実際の値**。CLAUDE.md「API利用の方針」と本 Issue の指示により**外部アクセスを行っていない**ため、リポジトリ内に情報源が無い（`docs/` を全文検索したが順位色の記述は無い）。§3.2 の値は本設計時点では独自判断だったが、**【2026-09-05 解決】オーナーが「金・銀・銅・緑」（本家準拠）で確定**し、UI検証 V1 も実施不要と確認済み（§7.4）。
 
 ---
 
@@ -258,18 +258,22 @@ export const RANK_COLOR_TONES: Record<'light' | 'dark', Record<RankColorKey, num
 
 **（c）「本家準拠」の未充足を明示する**
 
-Issue 本文は「順位色は本家準拠」と書いているが、**リポジトリ内に本家の順位色の情報源が無く、外部アクセスは行っていない**（§1.9）。上の値は「1位=金・ラス=赤・中間は寒色」という順序尺度としての独自判断である。**オーナー確認（§8.4 V1）で実際の本家配色との照合を委託し、差し替えが必要なら `RANK_COLOR_SOURCES` の4行を書き換えるだけで完結する構造にしてある。**
+Issue 本文は「順位色は本家準拠」と書いているが、**リポジトリ内に本家の順位色の情報源が無く、外部アクセスは行っていない**（§1.9）。設計時点の値は独自判断だったが、**【2026-09-05 解決】オーナーが「金・銀・銅・緑」で確定**（§1.3 実測値に反映済み）。差し替えが必要になった場合も `RANK_COLOR_SOURCES` の4行を書き換えるだけで完結する構造は維持している。
 
 **（d）三麻の色割当**
 
-**順位インデックスではなく「意味」で割り当てる。**
+**【2026-09-05 改訂・オーナー指示】色は「意味（順位の良し悪し）」ではなく「メダルの位置（1位〜4位という順序尺度そのもの）」で割り当てる。** 順位インデックスに対応するトークンをそのまま使う。
 
 | 卓 | スライス | 使うトークン |
 |---|---|---|
 | 四麻（`rank_rates.length === 4`） | 1位 / 2位 / 3位 / 4位 | `rank-1` / `rank-2` / `rank-3` / `rank-4` |
-| 三麻（`rank_rates.length === 3`） | 1位 / 2位 / **3位（＝ラス）** | `rank-1` / `rank-2` / **`rank-4`** |
+| 三麻（`rank_rates.length === 3`） | 1位 / 2位 / **3位** | `rank-1` / `rank-2` / **`rank-3`** |
 
-三麻の3位に `rank-3`（青緑）を当てると「ラスが赤くない」ことになり、四麻と並べたときに意味が反転する。**最下位は常に `rank-4`（赤）**とする。この規則は `rankView.ts` の純関数で表現し、ユニットテスト U5 で固定する。
+**旧規則（設計時点）**: 「最下位は常に `rank-4`」とし、三麻の3位にも `rank-4` を当てていた。根拠は「`rank-3`＝中間色、`rank-4`＝赤＝ラス」という**価値の尺度**（暫定配色時代の色相）を前提に、三麻のラスにも「悪い順位＝赤」を反映させることだった。
+
+**変更理由（2026-09-05 オーナー確定）**: 順位色が雀魂本家準拠の**金・銀・銅・緑のメダル配色**に確定したことで、色の意味が「良し悪しの評価」から「順位という位置」そのものに変わった。メダルの読みでは三麻は 金・銀・銅 が自然な対応であり、緑（メダル圏外）は四麻の4位にしか存在しない。三麻の最下位に「メダル無し」の緑を当てると、三麻には元々無い「4位」の色を持ち込むことになり、かえって不自然。したがって三麻は 1位=金・2位=銀・3位=銅 とし、`rank-4`（緑）は四麻の4位専用にする。
+
+この規則は `rankView.ts` の `COLOR_TOKENS_BY_LENGTH` で表現し、ユニットテスト U4 で固定する（三麻3位が `rank-3` になること、`rank-4` にならないこと）。
 
 ### 3.3 ドーナツの描き方
 
@@ -321,8 +325,8 @@ Issue 本文は「順位色は本家準拠」と書いているが、**リポジ
 
 - 卓人数が違えば凡例の行数が違うので高さは違ってよい（三麻と四麻で別の値でよい）。ただし**同一卓人数の中では3状態が完全一致**すること。
 - そのため `RankCard` は `numPlayers` を受け取り、**`loading` のプレースホルダも卓人数ぶんの凡例行を出す**（`ready` の行数と一致させる）。
-- `error` はメッセージ枠に `min-height` を与えて `ready` の本文高さに一致させる。**エラー文言が長くなると破れる**（issue-8 §10-9 と同じ制約）。`describeStatsError` の現行文言は2行に収まる。
-- 具体的な px 値は本設計では**指定しない**（issue-8 は px を指定して2回外した）。受け入れ条件 B3 は「3状態の実測値が**全一致**すること」で判定し、絶対値は記録するだけにする。
+- **【2026-09-05 改訂・検収差し戻し P2-1】** `error` に固定 `min-height` を与える方式は、三麻/四麻で `ready` 本文高さが異なる（実測 484px/2列不成立後の1列実測で三麻481px・四麻512px）ため単一の値で両立できず破棄した。代わりに、`error`（および `buildRankView` が `null` を返す想定外形状）でも `loading` と同じ「ドーナツ枠＋凡例枠＋タイル枠」の構造を描き、`visibility: hidden` で見えなくした上でメッセージを絶対配置で重ねる（§4.5・§4.7）。こうすると `error` の高さは構造的に `loading` と同一になり、`loading` を `ready` に一致させさえすれば3状態とも一致する。
+- 具体的な px 値は本設計では**指定しない**（issue-8 は px を指定して2回外した）。受け入れ条件 B3 は「3状態の実測値が**全一致**すること」で判定し、絶対値は記録するだけにする。**ただし各スケルトン行の高さは ready の対応行に実測して合わせる必要がある**（凡例1行は 23px。§9）。
 
 `empty` はパネル構造そのものが変わる状態なので R1 の対象外。
 
@@ -432,7 +436,7 @@ export function skeletonSliceCount(numPlayers: NumPlayers): number; // 4 → 4, 
 
 1. `rates = stats.rank_rates`。`rates.length !== 3 && rates.length !== 4` なら `null`
 2. `stats.rank_avg_score.length !== rates.length` なら `null`
-3. `colorToken`: 長さ4 → `['rank-1','rank-2','rank-3','rank-4']`、長さ3 → `['rank-1','rank-2','rank-4']`（§3.2-d）
+3. `colorToken`: 長さ4 → `['rank-1','rank-2','rank-3','rank-4']`、長さ3 → `['rank-1','rank-2','rank-3']`（§3.2-d 改訂。三麻の最下位は `rank-3`）
 4. `arcOffset_i = -(DONUT_CIRCUMFERENCE * Σ_{j<i} rate_j)`
 5. `arcLength_i = rate_i === 0 ? null : Math.min(Math.max(DONUT_CIRCUMFERENCE * rate_i - DONUT_GAP, DONUT_MIN_ARC), DONUT_CIRCUMFERENCE)`
 6. タイル5枚を §3.6 の順・§3.5 の書式で組む。**`avg_rank` と `negative_rate` は API 値をそのまま使う**
@@ -532,7 +536,7 @@ export function RankCard(props: RankCardProps): ReactElement;
 |---|---|---|
 | `ready` | 上記 | 基準 |
 | `loading` | `Donut placeholder` ＋ 中央は空 ＋ 凡例は `skeletonSliceCount(numPlayers)` 行のプレースホルダ ＋ タイル5枚のプレースホルダ | 各プレースホルダの高さを ready の対応要素と**同じ typescale 由来の高さ**にする |
-| `error` | タイトル ＋ `.rank-card__message`（`state.message`） | `.rank-card__message { min-height: … }` で ready の本文高さに一致させる。**具体値は製造時に実測して決める**（§3.4） |
+| `error` | タイトル ＋ `loading` と同じ構造（Donut・凡例・タイル）を `visibility: hidden` で描いた上に `.rank-card__message`（`state.message`）を絶対配置で重ねる | 固定 `min-height` を使わない。構造が `loading` と同一なので、`loading` の各行高さを `ready` に合わせれば自動的に一致する（§3.4 改訂） |
 
 ### 4.6 `src/summary/SummaryPanel.tsx`（変更）
 
@@ -550,17 +554,21 @@ LevelDetailCard（カード1・層側）
 
 `.rank-card*` / `.donut*` の規則を追記する。**既存の `.identity*` / `.level-detail*` / `.summary-panel*` の規則は1行も変えない。**
 
+**【2026-09-05 改訂・検収差し戻し P2-1】** 当初「375px幅で2カラムに収まる」としていたが、実ページのカード内容幅は 311px（375 − ページ左右パディング32px − カード左右パディング32px）で、2カラムに必要な 312px（ドーナツ200 + gap16 + 凡例最小96）を下回るため、**本番では2カラムが一度も成立しない**ことが検収で判明した（§9 参照）。加えて、幅で挙動が変わること自体が `loading`/`ready`/`error` の高さ不一致（R1 違反）の原因だった。したがって **`.rank-card__chart` は常に1カラム（縦積み）にし、幅による分岐をやめる。**
+
 - `.donut { position: relative; width: 100%; max-width: 200px; aspect-ratio: 1; }`
 - `.donut__svg { display: block; width: 100%; height: 100%; }`
 - `.donut__track { stroke: var(--md-sys-color-surface-container-highest); }`
 - `.donut__seg { transition: stroke-dasharray 300ms cubic-bezier(0.05,0.7,0.1,1); }` ＋ `@media (prefers-reduced-motion: reduce)` で `transition: none`
 - `.donut__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }`
-- `.rank-card__chart { display: flex; gap: 16px; align-items: center; }` — 375px 幅ではドーナツ左・凡例右の2カラムに収まる（ドーナツ 200px 上限＋凡例最小 96px）。収まらない場合は `flex-wrap: wrap`
+- `.rank-card__chart { display: flex; flex-direction: column; align-items: center; gap: 16px; }` — **常に1カラム（ドーナツ→凡例の縦積み）。幅による分岐をしない**
 - `.rank-card__swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--swatch); flex: 0 0 auto; }`
 - `.rank-card__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 0; }`
 - `.rank-card__title` / `dt`: `--md-sys-color-on-surface-variant`、`dd`: `--md-sys-color-on-surface`
-- `.rank-card__message { color: var(--md-sys-color-error); min-height: …; margin: 0; }`
-- `.rank-card__skeleton { background: var(--md-sys-color-surface-container-highest); border-radius: 4px; }`（アニメーションなし。#15 が担当）
+- `.rank-card__body { position: relative; display: flex; flex-direction: column; gap: 12px; }` — chart と tiles をまとめ、error 時にメッセージを重ねる土台にする
+- `.rank-card__body--message > .rank-card__chart, .rank-card__body--message > .rank-card__tiles { visibility: hidden; }` — error・想定外形状のとき、chart/tiles の**構造は描くが見えなくする**（場所は確保される）
+- `.rank-card__message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-error); margin: 0; }` — 固定 `min-height` は**使わない**（三麻/四麻で ready 高さが違う以上、単一の固定値では両立しないため。§3.4 R1）
+- `.rank-card__skeleton { background: var(--md-sys-color-surface-container-highest); border-radius: 4px; }`（アニメーションなし。#15 が担当）。**各スケルトン行の高さは `ready` の対応行と実測して合わせる**（凡例1行は 23px。§9 実測）
 
 **`summary.css` に16進カラーリテラルを1つも書かないこと**（CLAUDE.md 制約5。静的検証 S7）。
 
@@ -612,7 +620,7 @@ LevelDetailCard（カード1・層側）
 2. **`gameCount` を `scope.identity` から取らない。** カード2はフィルタ適用後の試合数を出す。`identity.gameCount` は全期間の通算値（§2）。
 3. **局数は `extended.roundCount`。** `stats.gameCount` と混同しない（実データで 54 戦 / 194 局。§1.4）。
 4. **`extended` は `ready` でも `null` になりうる**（§1.6）。
-5. **三麻の3位に `rank-3` を当てない。** 最下位は常に `rank-4`（§3.2-d）。
+5. **三麻の3位には `rank-3` を当てる。** `rank-4`（緑）は四麻の4位専用（§3.2-d 改訂）。
 6. **`stroke-linecap: round` にしない。** 隙間が埋まり §1.3 のコントラスト前提が崩れる。
 7. **`recharts` を import しない**（§3.1。静的検証 S8）。
 8. **`summary.css` の既存規則を書き換えない。** 追記のみ。
@@ -632,7 +640,7 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 | U1 | 四麻の実レスポンス値でスライスが4つ・順位ラベルが 1位〜4位 になる | `src/api/testdata/player_stats.json` の値を入力 |
 | U2 | 三麻でスライスが3つになる | fixture `player_stats_3p.json` の値 |
 | U3 | 四麻の色トークンが rank-1..rank-4 の順になる | §3.2-d |
-| U4 | **三麻の3スライス目の色トークンが rank-4 になる** | §3.2-d。**rank-3 でないこと**を明示的に assert |
+| U4 | **三麻の3スライス目の色トークンが rank-3 になる** | §3.2-d 改訂。**rank-4 でないこと**を明示的に assert |
 | U5 | arcOffset が累積割合 × 円周の負値になる | 先頭は `-0`、2番目は `-(C*rates[0])` |
 | U6 | arcLength が `C*rate - DONUT_GAP` になる | `toBeCloseTo` で比較 |
 | U7 | rate が 0 のスライスの arcLength が null になる | `[0.6,0.4,0,0]` |
@@ -669,7 +677,7 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 | S8 | `grep -rn "recharts" src/` | **0件**（§3.1。本 Issue でも 0 kB を維持する） |
 | S9 | `grep -rn "useCurrentIdentity\|CurrentIdentityState\|identityView" src/summary/rankView.ts src/summary/RankCard.tsx src/summary/Donut.tsx` | 0件（カード2がカード1のデータ源に触れていない。§2） |
 | S10 | `grep -c "RankGallery" dist/assets/*.js` | 0（dev 専用コードが本番バンドルに入っていない） |
-| S11 | `grep -n "rank-3" src/summary/rankView.ts` | 1件以上、かつ**三麻の分岐に現れない**ことをコードで確認（§3.2-d） |
+| S11 | `sed -n "/COLOR_TOKENS_BY_LENGTH/,/};/p" src/summary/rankView.ts` を目視確認 | **三麻の行（`3:`）に `rank-3` が含まれ `rank-4` が含まれないこと**。**四麻の行（`4:`）に `rank-3` と `rank-4` の両方が含まれること**（§3.2-d 改訂） |
 | S12 | `git diff --stat c00b2db -- src/domain/ src/api/ src/filters/ src/shell/ src/components/ package.json src/summary/identityView.ts src/summary/IdentityCard.tsx src/summary/LevelDetailCard.tsx` | **出力が空**（§4.9 の「触らない」が守られている） |
 | S13 | `git diff c00b2db -- src/summary/summary.css \| grep "^-" \| grep -v "^---"` | **出力が空**（`summary.css` は追記のみ。既存行を削除・変更していない） |
 
@@ -693,7 +701,7 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 | # | 実行すること | 合格条件 |
 |---|---|---|
 | B1 | `#/__rank` を開く | 10状態すべてが描画され、**コンソールエラー0**。状態4に `[data-testid="rank-card"]`（`data-state="ready"`）、その中に `rank-donut` / `rank-legend` / `rank-tiles` がある |
-| B2<br>三麻・四麻 | 状態4（四麻）と状態5（三麻）で `document.querySelectorAll('[data-testid="rank-donut"] .donut__seg').length` と凡例 `li` の数を数える | 四麻 = **4 / 4**、三麻 = **3 / 3**。さらに三麻の最終スライスの `stroke` が `getComputedStyle(document.documentElement).getPropertyValue('--md-custom-color-rank-4')` と一致する（§3.2-d）。四麻の3番目は `rank-3` と一致する |
+| B2<br>三麻・四麻 | 状態4（四麻）と状態5（三麻）で `document.querySelectorAll('[data-testid="rank-donut"] .donut__seg').length` と凡例 `li` の数を数える | 四麻 = **4 / 4**、三麻 = **3 / 3**。さらに三麻の最終スライスの `stroke` が `getComputedStyle(document.documentElement).getPropertyValue('--md-custom-color-rank-3')` と一致する（§3.2-d 改訂。三麻最下位＝銅）。四麻の3番目・4番目もそれぞれ `rank-3` / `rank-4` と一致する |
 | **B3**<br>高さ不変（R1） | `[data-testid="rank-height-probe"]` 内の `[data-testid="rank-card"]` の `getBoundingClientRect().height` を配列で取る | **四麻の3枚（loading / ready / error）が完全一致**（`new Set(...).size === 1`）。**三麻の2枚（loading / ready）が完全一致**。実測値をレポートに記録する（絶対値の上限は課さない。§3.4） |
 | B4<br>導出値 | 状態4のタイル5枚の `textContent` を順に読む | `['2.70', '35.2%', '25.9%', '5.6%', '22,894']`。凡例は `['1位 20.4%','2位 14.8%','3位 38.9%','4位 25.9%']` 相当。中央は `54` `戦` と `194局`。**この値は `src/api/testdata/player_stats.json` の実レスポンスから §1.4・§1.5 の式で手計算したもの** |
 | B5 | `#/4/player/<実在ID>/summary` を開く | `[data-testid="rank-card"]` が層側に描画され、**`[data-testid="level-detail-card"]` と `rank-graph-placeholder` の後ろ**にある（`compareDocumentPosition` で確認）。コンソールエラー0。ページ本体に水平スクロールが無い（`scrollWidth <= clientWidth`） |
@@ -712,14 +720,14 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 
 | # | 委託内容 | 種別 |
 |---|---|---|
-| **V1**<br>【2026-09-05 差し替え】 | **light モードで `#/__rank` の状態4・5を開き、2位の「銀」（`#50585f`）が銀として読めるかを書く。** 読めない場合、(a) このままでよい (b) 青寄せを強める (c) 別の色にする、のどれが良いかも書く | **オーナー決定事項。** 順位色は「金・銀・銅・緑」でオーナー確定済み（本家準拠）。ただし **light モードの銀は白背景でコントラスト 3:1 を満たすため暗いスレート `#50585f` になる**（明るくすると 2.83 まで落ちて不可。§1.3 実測）。dark モードは `#99a1a9` で銀らしく出る。この light 側の見え方だけが未確定 |
-| V2 | 実機スマホで `#/4/player/<ID>/summary` を開き、ドーナツと5タイルのバランス（ドーナツが大きすぎ／小さすぎないか、凡例が読めるか）を書く | ハードウェア依存＋主観 |
+| **V1**<br>【確認済み・実施不要】 | ~~light モードで `#/__rank` の状態4・5を開き、2位の「銀」（`#50585f`）が銀として読めるかを書く~~ | **オーナー確認済み（2026-09-05）**: 「順位色はライト・ダークいずれも悪くない」との回答を得た。light の銀 `#50585f` を含め、この委託は**実施不要**。§1.3・§3.2-c の実測メモは判断の記録として残す |
+| V2 | 実機スマホで `#/4/player/<ID>/summary` を開き、ドーナツと5タイルのバランス（ドーナツが大きすぎ／小さすぎないか、凡例が読めるか）を書く | ハードウェア依存＋主観。**【2026-09-05 前提改訂】** `.rank-card__chart` は常に1カラム（縦積み）で実装されている（§4.7）。「2カラムに収まるか」ではなく「縦積みでドーナツと凡例のバランスが窮屈でないか」を見てもらう |
 | V3 | OS のダークモードを**実際に切り替えて**、ドーナツ4色の識別しやすさを light/dark で比較して書く。「隣り合う2色が同じに見える」組み合わせがあれば記録する | エージェント環境で再現不能。§1.3 の隣接コントラスト 1.23 が実用に足るかの検証 |
 | V4 | 色覚特性のシミュレーション（OS のカラーフィルタ等）を使えるなら、1型・2型で4色が区別できるかを書く。使えない場合は「未実施」でよい | ハードウェア/OS 依存 |
 | V5 | 期間フィルタを何度か切り替え、カード2が読み込み中と表示中で**動かない**か（下のカードが上下しないか）を体感で書く | §3.4 R1 の主観確認 |
 | V6 | 「平均持ち点 22,894」という数値が、配給原点 25000 との対比なしで意味が伝わるか。「25000 との差」を出したほうがよいと感じるかを書く | 仕様の当否。**#11（カード4）の設計入力になる** |
 
-各項目に「判断保留」欄と保留理由欄を置くこと。V1 は「この色でよいですか」のような正解を示唆する聞き方をせず、**見えたままを書いてもらう**こと。
+各項目に「判断保留」欄と保留理由欄を置くこと。**V1 はオーナー確認済みのため委託不要（上表参照）。** 残る委託項目も「この色でよいですか」のような正解を示唆する聞き方をせず、**見えたままを書いてもらう**こと。
 
 ---
 
@@ -731,7 +739,7 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 | **#13（ヒストグラム14枚）・#17（順位グラフ）** | §3.1 の `recharts` 不採用は**ドーナツについての判断**である。軸・目盛・比較線が要るグラフでは事情が違いうるので、**同じ手順（一時プローブ → `npm run build` → 削除）で必ず実測してから決める**こと。実測値の基準は本設計 §1.1 の表 |
 | **#10・#11（カード3・4）** | `SummaryPanel` に追加していく。`scope.stats` から取る。**§3.4 R1（loading / ready / error で高さを一致させる）を同じく適用すること。** `empty` はパネル単位で1回だけ扱う（カード側に持たせない） |
 | **#15（ローディング・空・エラー）** | 本 Issue の `loading` は「跳ねない」ことだけを満たす最小実装（アニメーションなし）。`.rank-card__skeleton` のモーション設計は #15 |
-| **順位色の確定** | **【2026-09-05 解決】** オーナーが「金・銀・銅・緑」（雀魂本家準拠）で確定。`RANK_COLOR_SOURCES` に反映済み。残るのは **light モードの銀の見え方**のみで V1 で判断する。調整する場合は §1.3 の手順（`TonalPalette` でトーンを振ってコントラストを実測）を再実行すること |
+| **順位色の確定** | **【2026-09-05 解決】** オーナーが「金・銀・銅・緑」（雀魂本家準拠）で確定。`RANK_COLOR_SOURCES` に反映済み。**light モードの銀の見え方も UI検証 V1 でオーナー確認済み（悪くない）。** 今後調整する場合は §1.3 の手順（`TonalPalette` でトーンを振ってコントラストを実測）を再実行すること |
 | **`recharts` の依存** | `package.json` に残したまま（§3.1）。#13・#17 の判断が済んだ時点で、使わないと確定したら削除を検討する |
 | **`docs/requirements.md` §4.1** | カード2の内容は要件どおり実装した。要件表の「ビジュアル」欄に書かれた「ドーナツ」を **`recharts` ではなく自前 SVG で実現**した旨を追記するかは統括担当の判断 |
 
@@ -739,10 +747,10 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 
 ## 9. 実挙動未確認・推定で書いた箇所
 
-1. **本家（amae-koromo）の順位色を確認していない。** 外部アクセスを行っていないため（§1.9）。§3.2 の4色は本設計の独自判断であり、**Issue 完了条件の「順位色は本家準拠」は現時点で未充足**。V1 で確認し、必要なら `RANK_COLOR_SOURCES` を差し替える。
+1. **【2026-09-05 解決】本家（amae-koromo）の順位色。** 外部アクセスを行っていないため実測はできなかったが、オーナーが「金・銀・銅・緑」（雀魂本家準拠）で確定し、`RANK_COLOR_SOURCES` に反映済み。UI検証 V1（ライト/ダークの見え方）もオーナー確認済みで実施不要（§7.4）。
 2. **実 API レスポンスでの動作確認をしていない。** 入力値は `src/api/testdata/player_stats.json`（issue-3 が保存した実レスポンス）と `src/domain/__fixtures__` に限られる。`rank_rates` が3・4以外の長さになる実例、`extended` が `null` になる実例は観測していない（型定義上は起こりうるので分岐を書いた）。B5・B6 で初めて実データにあたる。
-3. **カードの高さの絶対値を実測していない。** issue-8 は px 値を先に決めて2回外したので、本設計は**絶対値を指定せず「3状態が一致すること」だけを要求する**方針にした（§3.4）。ただし `.rank-card__message` の `min-height` は製造時に実測して決める必要があり、**その値は設計書に無い**。
-4. **`.rank-card__chart` が 375px 幅で2カラムに収まるかは机上計算**（ドーナツ 200px 上限 ＋ gap 16 ＋ 凡例最小 96 = 312 ≤ カード内幅 311〜343）。境界に近いので `flex-wrap: wrap` を保険に入れてある。**実測は B5 で初めて行われる。**
+3. **【2026-09-05 解決】カードの高さが実ページで一致しなかった（検収 P2-1）。** 当初 `.rank-card__message` に固定 `min-height` を与える方式にしたが、三麻/四麻で `ready` 本文高さが異なるため単一の値では両立せず、`loading`/`error` の凡例スケルトン行の高さも `ready`（23px）と食い違っていた。是正: ①`.rank-card__chart` を常に1カラムにして幅依存をなくす、②スケルトン各行の高さを `ready` に実測して合わせる、③固定 `min-height` をやめ、`error` は `loading` と同じ構造を非表示で描いてメッセージを重ねる方式に変更（§3.4・§4.7）。実測: 四麻 loading/ready/error = 512px で一致、三麻 loading/ready = 481px で一致（カード内容幅311px・343px の両方で確認）。
+4. **【2026-09-05 解決】`.rank-card__chart` の2カラム機上計算は誤りだった。** 実測したカード内容幅は 311px で、2カラムに必要な 312px を**下回っており、本番では2カラムが一度も成立しない**ことが検収で判明した（机上計算が使ったカード内幅の見積り 311〜343 のうち、実際に効くのは下限の 311 だった）。是正として `flex-wrap: wrap` の保険をやめ、**常に1カラム（縦積み）**に変更した（§4.7）。
 5. **`stroke-dasharray` の `transition` がスライス数の変わる遷移（四麻↔三麻）で破綻しないかは未確認。** プレイヤーページの `numPlayers` 切替時に起きうる。破綻したら `transition` を外す（見た目の劣化のみで機能は保たれる）。
 6. **§1.3 の隣接コントラスト 1.22〜1.23 が実用に足るかは主観判断。** 隙間（`DONUT_GAP`）と凡例のテキストで補う設計にしたが、**実機での見え方は V3・V4 で初めて評価される**。
 7. **`--md-custom-color-rank-*` のトークン名が MD3 の慣習に沿うかは確認していない。** 既存の `--md-custom-color-win` 等と同じ接頭辞に揃えただけである。
