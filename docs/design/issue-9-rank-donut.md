@@ -326,7 +326,28 @@ Issue 本文は「順位色は本家準拠」と書いているが、**リポジ
 - 卓人数が違えば凡例の行数が違うので高さは違ってよい（三麻と四麻で別の値でよい）。ただし**同一卓人数の中では3状態が完全一致**すること。
 - そのため `RankCard` は `numPlayers` を受け取り、**`loading` のプレースホルダも卓人数ぶんの凡例行を出す**（`ready` の行数と一致させる）。
 - **【2026-09-05 改訂・検収差し戻し P2-1】** `error` に固定 `min-height` を与える方式は、三麻/四麻で `ready` 本文高さが異なる（実測 484px/2列不成立後の1列実測で三麻481px・四麻512px）ため単一の値で両立できず破棄した。代わりに、`error`（および `buildRankView` が `null` を返す想定外形状）でも `loading` と同じ「ドーナツ枠＋凡例枠＋タイル枠」の構造を描き、`visibility: hidden` で見えなくした上でメッセージを絶対配置で重ねる（§4.5・§4.7）。こうすると `error` の高さは構造的に `loading` と同一になり、`loading` を `ready` に一致させさえすれば3状態とも一致する。
-- 具体的な px 値は本設計では**指定しない**（issue-8 は px を指定して2回外した）。受け入れ条件 B3 は「3状態の実測値が**全一致**すること」で判定し、絶対値は記録するだけにする。**ただし各スケルトン行の高さは ready の対応行に実測して合わせる必要がある**（凡例1行は 23px。§9）。
+- 具体的な px 値は本設計では**指定しない**（issue-8 は px を指定して2回外した）。受け入れ条件 B3 は「3状態の実測値が**全一致**すること」で判定し、絶対値は記録するだけにする。
+
+**【2026-09-06 改訂】R1 の担保方法を「実測値の焼き付け」から「共有変数」に変える**
+
+当初は「スケルトン各行の高さを `ready` の対応行に実測して合わせる」（凡例1行 = 23px を CSS に直書きする）方式だった。**この方式は2回壊れた。** `ready` 側の行高さはフォント由来（typescale × line-height）で決まるのに対し、スケルトン側だけが定数だったため、**凡例の要素構成が変わるたび（回数表示の追加など）に `ready` 側だけが動いて一致が崩れ、しかも警告も型エラーも出ない**。
+
+改訂後は **`.rank-card__legend` の `--legend-row-height`（24px）1つから両状態が決まる形**にする。
+
+- スケルトン行: `height: var(--legend-row-height)`
+- `ready` 行: `.rank-card__legend-item { min-height: var(--legend-row-height) }` で**下から押し広げる**
+
+`ready` 行の自然高（フォント由来）は実測 23px で、`--legend-row-height` の 24px がこれを上回るため、両状態とも 24px に揃う。フォントが多少動いても自然高が 24px を超えない限り一致は保たれる。**変更するときは `--legend-row-height` の1箇所だけを触ること。**
+
+なお `.rank-card__tile .rank-card__skeleton` の `height: 46px` は依然として実測値の焼き付けである（タイル本文 `dt + dd + gap` の高さ）。ここは `ready` 側を押し広げる形にできていない（`dd` の typescale をそのまま使うため）ので、**タイルのタイポグラフィを変更したら B3 を必ず再実行すること**。B3 はこの値のズレを検出できることを検収のミューテーションで確認済み（46px → 40px で全レイアウトの一致が壊れる）。
+
+**なぜ R1 のためにレイアウトを固定する必要は無いのか**（1カラム固定の撤回）
+
+検収1回目の P2-1（実ページ幅で3状態の高さが揃わない）に対し、一度「`.rank-card__chart` を常に1カラム（縦積み）にする」是正を行った。**しかしオーナーから「1カラム固定ではスマホ以外で間延びする」と差し戻され、この是正は撤回した。**
+
+差し戻しは正しい。**P2-1 の真因は「幅で挙動が変わること」ではなく「スケルトンの各行の高さが `ready` の対応行とズレていたこと」だった。** 行の高さが揃っていれば、`loading` / `ready` / `error` は同じ DOM 構造・同じ行数を描くのだから、**どのレイアウト（縦積みでも3カラムでも）でも高さは一致する**。レイアウトを固定するのは、真因に効かないうえに表示品質を落とす不要な妥協だった。
+
+したがって幅による分岐は §4.7 のとおり復活させ、B3 は**基準幅の両側（縦積み側・3カラム側）で測る**ことにした（受け入れ条件 B3 改訂）。
 
 `empty` はパネル構造そのものが変わる状態なので R1 の対象外。
 
@@ -334,7 +355,8 @@ Issue 本文は「順位色は本家準拠」と書いているが、**リポジ
 
 | 値 | 書式 | 例 | 根拠 |
 |---|---|---|---|
-| 順位率（凡例） | `(rate * 100).toFixed(1)` ＋ `%` | `20.4%` | 小数1桁。牌譜屋の慣用 |
+| 順位率（凡例） | `(Math.round(rate * 1000) / 10).toFixed(1)` ＋ `%` | `20.4%` | 小数1桁。牌譜屋の慣用。**丸め方式の変更については下記参照** |
+| 順位ごとの回数（凡例） | 最大剰余法で整数化 ＋ `toLocaleString('ja-JP')` ＋ `回` | `11回` | **【2026-09-06 追加・オーナー指示】**。下記参照 |
 | 平均順位 | `avg_rank.toFixed(2)` | `2.70` | 順位は2桁ないと差が見えない |
 | 連対率 / ラス率 / 飛び率 | `(x * 100).toFixed(1)` ＋ `%` | `35.2%` `25.9%` `5.6%` | 凡例と揃える |
 | 平均持ち点 | `Math.round(x).toLocaleString('ja-JP')` | `22,894` | 素点は3桁区切り（issue-8 §3.7 と統一）。小数は出さない |
@@ -343,6 +365,24 @@ Issue 本文は「順位色は本家準拠」と書いているが、**リポジ
 
 - 数値要素にはすべて `.numeric`（`tabular-nums`。`src/index.css` の既存クラス）を付ける。
 - **順位率の合計は丸めの結果 100.0% にならないことがある**（例 `[0.2037,0.1481,0.3888,0.2592]` → 20.4+14.8+38.9+25.9 = 100.0 だが、常に成立するとは限らない）。合計を表示しないので実害は無い。**合計を 100 に合わせる補正を入れないこと**（値が API と食い違う方が害が大きい）。
+
+**【2026-09-06 改訂】凡例の書式を「1位 11回 (20.4%)」にする（オーナー指示）**
+
+旧実装は `1位 …………… 20.4%` のように順位ラベルと数値を `space-between` で左右に引き離しており、行が長いとラベルと数値の対応が読み取りづらかった。改訂後は **順位・回数・パーセンテージを詰めて1グループ**にし、**実回数を追加**する（`%` だけでは母数がわからず、「38.9% は何回か」を暗算させていた）。
+
+**回数の導出 — 最大剰余法（Largest Remainder Method）**
+
+API は回数を返さない（`rank_rates` の割合だけ）。したがって `rank_rates[i] × gameCount` を整数化する必要がある。**各順位を独立に四捨五入すると合計が総試合数と食い違う**（例 `rates=[0.15,0.15,0.15,0.55]` / `gameCount=10` → `Math.round` は `.5` を常に切り上げるため 2+2+2+6 = 12 ≠ 10）。凡例のすぐ隣（ドーナツ中央）に `54戦` と総数が出ている以上、この不一致は目で拾える。
+
+そこで **最大剰余法**を使う: まず全順位を切り捨て、`gameCount − 切り捨ての合計` を端数の大きい順に 1 ずつ配る。実データ（`rank_rates:[0.2037,0.1481,0.3888,0.2592]` / 54戦）で **11 + 8 + 21 + 14 = 54** と一致することを実測済み（受け入れ条件 B4）。
+
+**この一致の成立範囲（既知の限界。実装の仕様として記録する）**
+
+`rank_rates` は API 側で小数4桁に丸められており、合計がちょうど 1.0 にならないことがある（実データは 0.9998）。配り直す端数の個数は最大でも `rank_rates.length`（3 or 4）なので、**`gameCount × (1 − Σrank_rates)` が概ね 2 を超える規模、すなわち試合数が約 7,000 を超えると合計が総試合数より 1〜2 少なくなる**（dev ギャラリー状態9 の 12,345 戦で 2,515+1,829+4,800+3,200 = 12,344 を実測）。ズレの上限は `gameCount × 0.0002` 程度＝試合数の 0.02% 未満であり、**「凡例の回数を足し算した読者だけが 1 の差に気づく」水準**のため、補正のための追加ロジック（余りが尽きるまで巡回配分する等）は入れない。**「合計が総試合数に一致する」は数千戦までの保証**であると理解すること。
+
+**`percentText` の丸め方式を `(rate*100).toFixed(1)` から変更した理由**
+
+設計初版は `(rate * 100).toFixed(1)` と書いていたが、これは**設計書自身の期待値と矛盾する**。`0.0555 * 100` は二進浮動小数点で `5.549999999999999…` になり、`toFixed(1)` は `'5.5'` を返す。しかし §3.5 の表と受け入れ条件 B4 はどちらも飛び率の期待値を **`5.6%`** と明記していた。二重丸め（`×100` で誤差を作ってから丸める）を避けるため、`Math.round(rate * 1000) / 10` で先に整数へ丸めてから 1/10 する方式に変更した。ユニットテスト U11 がこの値を固定する。
 - タイルの単位（`%` / `pt` 相当）は値と同じ要素に入れ、`aria` 上も読み上げが自然になるようにする。
 
 ### 3.6 タイルは5枚・固定順
@@ -508,10 +548,14 @@ export function RankCard(props: RankCardProps): ReactElement;
       </div>
 
       <ul class="rank-card__legend" data-testid="rank-legend">
+        <!-- 【2026-09-06 改訂】順位・回数・パーセンテージを詰めて1グループにする（§3.5） -->
         <li class="rank-card__legend-item" data-rank="1">
           <span class="rank-card__swatch" aria-hidden="true" style="--swatch: var(--md-custom-color-rank-1)"></span>
-          <span class="rank-card__legend-label">1位</span>
-          <span class="rank-card__legend-value numeric">20.4%</span>
+          <span class="rank-card__legend-text">
+            <span class="rank-card__legend-label">1位</span>
+            <span class="rank-card__legend-count numeric">11回</span>
+            <span class="rank-card__legend-value numeric">(20.4%)</span>
+          </span>
         </li>
         …
       </ul>
@@ -554,21 +598,35 @@ LevelDetailCard（カード1・層側）
 
 `.rank-card*` / `.donut*` の規則を追記する。**既存の `.identity*` / `.level-detail*` / `.summary-panel*` の規則は1行も変えない。**
 
-**【2026-09-05 改訂・検収差し戻し P2-1】** 当初「375px幅で2カラムに収まる」としていたが、実ページのカード内容幅は 311px（375 − ページ左右パディング32px − カード左右パディング32px）で、2カラムに必要な 312px（ドーナツ200 + gap16 + 凡例最小96）を下回るため、**本番では2カラムが一度も成立しない**ことが検収で判明した（§9 参照）。加えて、幅で挙動が変わること自体が `loading`/`ready`/`error` の高さ不一致（R1 違反）の原因だった。したがって **`.rank-card__chart` は常に1カラム（縦積み）にし、幅による分岐をやめる。**
+**【2026-09-05 改訂・検収差し戻し P2-1 → 2026-09-06 撤回】** 一度「`.rank-card__chart` は常に1カラム（縦積み）にし、幅による分岐をやめる」と改訂したが、**オーナーから「1カラム固定ではスマホ以外で間延びする」と差し戻され、この改訂は撤回した。** 真因はスケルトンの行高であってレイアウトではない（§3.4）。以下がオーナー確定の最終仕様である。
 
-- `.donut { position: relative; width: 100%; max-width: 200px; aspect-ratio: 1; }`
+**【2026-09-06 確定】レスポンシブ 2 レイアウト**
+
+| カード実効幅 | レイアウト |
+|---|---|
+| 600px 未満 | **縦積み**（ドーナツ → 凡例 → タイル5枚のグリッド） |
+| 600px 以上 | **3カラム**（ドーナツ ｜ 凡例 ｜ タイル縦1列） |
+
+- **切り替え基準は `@container`（`.rank-card__inner` に `container-type: inline-size` / `container-name: rank-card`）。** ビューポート幅のメディアクエリではなく**カード自身の実効幅**で決めるのは、このカードが `max-width` の無い層に置かれており、将来2カラムシェル等に置き直されても意図どおり動かすため。
+- DOM は縦積みと共通のまま、`.rank-card__body`（chart・tiles）と `.rank-card__chart`（donut・legend）をそれぞれ `flex-direction: row` にすることで見た目上の3カラムを作る。**状態間で DOM 構造が変わらないので R1 は両レイアウトで成立する**（B3 が両側で確認する）。
+- **`@container` ブロックは `.rank-card__*` の基本ルールより後ろに置くこと。** 詳細度が同じ（単一クラス）なので、基本ルール（`.rank-card__body { flex-direction: column }`）が後ろにあると後勝ちしてコンテナクエリが打ち消される。実際にこれを踏み、実ページでタイルだけが下の行に落ちていた（2026-09-06 実測で発見）。
+
+- `.donut { position: relative; width: 100%; max-width: 240px; aspect-ratio: 1; flex: 0 0 auto; }` — **【2026-09-06 改訂】ドーナツを 200px → 240px に拡大（オーナー指示「もう一回り大きく」）。** 375px 幅ではカード内容幅 311px が上限として効くので、縦積み側が過大になることはない
 - `.donut__svg { display: block; width: 100%; height: 100%; }`
 - `.donut__track { stroke: var(--md-sys-color-surface-container-highest); }`
 - `.donut__seg { transition: stroke-dasharray 300ms cubic-bezier(0.05,0.7,0.1,1); }` ＋ `@media (prefers-reduced-motion: reduce)` で `transition: none`
 - `.donut__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }`
-- `.rank-card__chart { display: flex; flex-direction: column; align-items: center; gap: 16px; }` — **常に1カラム（ドーナツ→凡例の縦積み）。幅による分岐をしない**
+- `.rank-card__chart { display: flex; flex-direction: column; align-items: center; gap: 16px; }` — 600px 未満の既定値（縦積み）。600px 以上は下記 `@container` が `flex-direction: row` に上書きする
+- `@container rank-card (min-width: 600px)` — `.rank-card__body { flex-direction: row; align-items: flex-start; gap: 16px }` / `.rank-card__chart { flex: 2 1 0; flex-direction: row }` / `.rank-card__legend { flex: 1 1 auto; width: auto; min-width: 0 }` / `.rank-card__tiles { flex: 1 1 0; min-width: 140px; grid-template-columns: 1fr }`。**ファイル末尾（基本ルールの後ろ）に置く**
 - `.rank-card__swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--swatch); flex: 0 0 auto; }`
+- `.rank-card__legend-text { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; min-width: 0; }` — 順位・回数・パーセンテージを詰める（§3.5 改訂）。**`space-between` を使わない**（ラベルと数値が引き離されて対応が読めなくなる）
+- `.rank-card__legend { --legend-row-height: 24px }` ＋ `.rank-card__legend-item { min-height: var(--legend-row-height) }` — **R1 の生命線**。ready とスケルトンの両方がこの1変数から決まる（§3.4 改訂）
 - `.rank-card__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 0; }`
 - `.rank-card__title` / `dt`: `--md-sys-color-on-surface-variant`、`dd`: `--md-sys-color-on-surface`
 - `.rank-card__body { position: relative; display: flex; flex-direction: column; gap: 12px; }` — chart と tiles をまとめ、error 時にメッセージを重ねる土台にする
 - `.rank-card__body--message > .rank-card__chart, .rank-card__body--message > .rank-card__tiles { visibility: hidden; }` — error・想定外形状のとき、chart/tiles の**構造は描くが見えなくする**（場所は確保される）
 - `.rank-card__message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-error); margin: 0; }` — 固定 `min-height` は**使わない**（三麻/四麻で ready 高さが違う以上、単一の固定値では両立しないため。§3.4 R1）
-- `.rank-card__skeleton { background: var(--md-sys-color-surface-container-highest); border-radius: 4px; }`（アニメーションなし。#15 が担当）。**各スケルトン行の高さは `ready` の対応行と実測して合わせる**（凡例1行は 23px。§9 実測）
+- `.rank-card__skeleton { background: var(--md-sys-color-surface-container-highest); border-radius: 4px; }`（アニメーションなし。#15 が担当）。凡例行は `--legend-row-height` から取る（実測値を焼き付けない。§3.4 改訂）。タイルの `height: 46px` のみ実測値の焼き付けが残っている（同）
 
 **`summary.css` に16進カラーリテラルを1つも書かないこと**（CLAUDE.md 制約5。静的検証 S7）。
 
@@ -591,7 +649,16 @@ LevelDetailCard（カード1・層側）
 | 9 | ready・大きな試合数 | `gameCount:12345` / `roundCount:56789`（中央の穴からあふれないこと） |
 | 10 | 想定外形状 | `rank_rates:[0.5,0.5]`（`buildRankView` が `null` → 「順位データを表示できません」） |
 
-**高さ計測プローブ**: ページ先頭に、実ページと同じ幅条件で `RankCard` を「四麻 loading / 四麻 ready / 四麻 error」の3枚、「三麻 loading / 三麻 ready」の2枚並べたブロックを置き、`data-testid="rank-height-probe"` を付ける（受け入れ条件 B3 が測る）。**横パディングを持つ祖先の外側に置くこと**（issue-8 §4.6 で計測器が壊れた原因）。
+**高さ計測プローブ**: ページ先頭に `data-testid="rank-height-probe"` のブロックを置き、その中に `data-testid="rank-height-probe-item"` を並べる（受け入れ条件 B3 が測る）。**横パディングを持つ祖先の外側に置くこと**（issue-8 §4.6 で計測器が壊れた原因）。
+
+**【2026-09-06 改訂】プローブは基準幅 600px の両側で測る。** 各 item に `data-layout`（`stack` / `row`）・`data-players`（`3` / `4`）・`data-state` を付け、以下 10 枚を並べる。
+
+| `data-layout` | プローブ幅 | 枚数 |
+|---|---|---|
+| `stack` | **343px**（＝実ページ最小幅 375 − ページ左右パディング 32。`@container` は `.rank-card` 自身の幅で決まるのでこの値が直接効く） | 四麻 loading/ready/error ＋ 三麻 loading/ready の5枚 |
+| `row` | **700px**（基準 600px を余裕をもって超える値。境界値ちょうどは丸め誤差を踏むので測らない） | 同じ5枚 |
+
+**なぜ両側で測るか**: issue-8・issue-9 で「ギャラリーのプローブが実ページとズレていて破れを検出できない」事故が計2回起きている。片側だけのプローブは、もう片側のレイアウトで R1 が壊れていても緑になる。
 
 カラーモード切替は `#/__theme` と同じ `useTheme().setModeSetting` を使う。
 
@@ -667,7 +734,7 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 
 | # | 実行すること | 合格条件 |
 |---|---|---|
-| S1 | `npm run build` | 成功。型エラー0。`dist/assets/index-*.js` が **487.0 kB 以下 / gzip 134.0 kB 以下**（**実測値をレポートに記載する**）<br>**上限の根拠**: ベースライン `c00b2db` = 481.09 kB / gzip 132.17 kB（実測）。本 Issue の追加分は ①順位色プラミング **+0.31 kB / gzip +0.12**（§1.8 実測）②自前 SVG ドーナツ＋凡例＋タイル相当 **+1.07 kB / gzip +0.44**（§1.1 実測）＝ **+1.38 kB / gzip +0.56**。実装は計測用プローブより richer（4状態分岐・`Donut` の分離・skeleton）なので枠を与える。新しい `@material/web` コンポーネント・新しい依存は1つも増えない（§3.7）<br>**【2026-09-05 改訂】485.0 / 133.5 → 487.0 / 134.0。** 実装後の実測が 486.21 kB / gzip 133.79 kB で、当初の枠を raw +1.21 kB・gzip +0.29 kB 超えた。製造担当が内訳を実測し `rankView.ts` 単体 +1.26 kB・`Donut.tsx` 単体 +0.78 kB で、**型定義・4状態分岐・アクセシビリティラベル・null 安全化を含むフル実装が §1.1 の簡易プローブより重い**ことが原因と判明。無駄な取り込みが無いことは静的検証で確認済み（`recharts` 0件・dev ギャラリーが dist に0件）。超過幅は raw 0.25% / gzip 0.2% で、機能を削って収める価値は無いと判断した<br>**この過小見積りは #5・#6・#8 でも起きている系統的な問題**。以降の設計では「簡易プローブの実測値 × 安全率」ではなく、**フル実装相当（型・状態分岐・a11y・null 安全化）の重さを織り込んだ枠**を置くこと（§9 へ引き継ぐ） |
+| S1 | `npm run build` | 成功。型エラー0。`dist/assets/index-*.js` が **487.0 kB 以下 / gzip 134.0 kB 以下**（**実測値をレポートに記載する**）<br>**上限の根拠**: ベースライン `c00b2db` = 481.09 kB / gzip 132.17 kB（実測）。本 Issue の追加分は ①順位色プラミング **+0.31 kB / gzip +0.12**（§1.8 実測）②自前 SVG ドーナツ＋凡例＋タイル相当 **+1.07 kB / gzip +0.44**（§1.1 実測）＝ **+1.38 kB / gzip +0.56**。実装は計測用プローブより richer（4状態分岐・`Donut` の分離・skeleton）なので枠を与える。新しい `@material/web` コンポーネント・新しい依存は1つも増えない（§3.7）<br>**【2026-09-05 改訂】485.0 / 133.5 → 487.0 / 134.0。** 実装後の実測が 486.21 kB / gzip 133.79 kB で、当初の枠を raw +1.21 kB・gzip +0.29 kB 超えた。製造担当が内訳を実測し `rankView.ts` 単体 +1.26 kB・`Donut.tsx` 単体 +0.78 kB で、**型定義・4状態分岐・アクセシビリティラベル・null 安全化を含むフル実装が §1.1 の簡易プローブより重い**ことが原因と判明。無駄な取り込みが無いことは静的検証で確認済み（`recharts` 0件・dev ギャラリーが dist に0件）。超過幅は raw 0.25% / gzip 0.2% で、機能を削って収める価値は無いと判断した<br>**【2026-09-06 最終実測】486.76 kB / gzip 133.97 kB**（レスポンシブ3カラム・ドーナツ拡大・回数表示を含む最終形）。改訂後の上限 487.0 / 134.0 に対する余裕は raw 0.24 kB / gzip **0.03 kB** しかない。**次の Issue は必ず上限を引き上げてから着手すること**（現行の枠のまま進めると即座に超える）。<br>**この過小見積りは #5・#6・#8 でも起きている系統的な問題**。以降の設計では「簡易プローブの実測値 × 安全率」ではなく、**フル実装相当（型・状態分岐・a11y・null 安全化）の重さを織り込んだ枠**を置くこと（§9 へ引き継ぐ） |
 | S2 | `npm run lint` | 新規エラー0（既存の警告水準を悪化させない） |
 | S3 | `npm test` | 全パス。`rankView.test.ts` が実行され、テスト数がベースラインより増えている |
 | S4 | `grep -rn "<md-" src/ --include='*.tsx'` | 0件 |
@@ -702,9 +769,9 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 |---|---|---|
 | B1 | `#/__rank` を開く | 10状態すべてが描画され、**コンソールエラー0**。状態4に `[data-testid="rank-card"]`（`data-state="ready"`）、その中に `rank-donut` / `rank-legend` / `rank-tiles` がある |
 | B2<br>三麻・四麻 | 状態4（四麻）と状態5（三麻）で `document.querySelectorAll('[data-testid="rank-donut"] .donut__seg').length` と凡例 `li` の数を数える | 四麻 = **4 / 4**、三麻 = **3 / 3**。さらに三麻の最終スライスの `stroke` が `getComputedStyle(document.documentElement).getPropertyValue('--md-custom-color-rank-3')` と一致する（§3.2-d 改訂。三麻最下位＝銅）。四麻の3番目・4番目もそれぞれ `rank-3` / `rank-4` と一致する |
-| **B3**<br>高さ不変（R1） | `[data-testid="rank-height-probe"]` 内の `[data-testid="rank-card"]` の `getBoundingClientRect().height` を配列で取る | **四麻の3枚（loading / ready / error）が完全一致**（`new Set(...).size === 1`）。**三麻の2枚（loading / ready）が完全一致**。実測値をレポートに記録する（絶対値の上限は課さない。§3.4） |
-| B4<br>導出値 | 状態4のタイル5枚の `textContent` を順に読む | `['2.70', '35.2%', '25.9%', '5.6%', '22,894']`。凡例は `['1位 20.4%','2位 14.8%','3位 38.9%','4位 25.9%']` 相当。中央は `54` `戦` と `194局`。**この値は `src/api/testdata/player_stats.json` の実レスポンスから §1.4・§1.5 の式で手計算したもの** |
-| B5 | `#/4/player/<実在ID>/summary` を開く | `[data-testid="rank-card"]` が層側に描画され、**`[data-testid="level-detail-card"]` と `rank-graph-placeholder` の後ろ**にある（`compareDocumentPosition` で確認）。コンソールエラー0。ページ本体に水平スクロールが無い（`scrollWidth <= clientWidth`） |
+| **B3**<br>高さ不変（R1） | `[data-testid="rank-height-probe"]` 内の `[data-testid="rank-card"]` の `getBoundingClientRect().height` を、`data-layout` × `data-players` でグループ化して取る。**必ず `await document.fonts.ready` の後に測る**（前に測ると数px ずれて偽陽性になる。実際に踏んだ） | **【2026-09-06 改訂】4条件すべてで一致すること。** 縦積み側（プローブ幅 343px = 375 − ページ左右パディング32）の四麻3枚（loading/ready/error）・三麻2枚（loading/ready）、および3カラム側（プローブ幅 700px）の四麻3枚・三麻2枚が、それぞれ `new Set(...).size === 1`。実測値をレポートに記録する（絶対値の上限は課さない。§3.4）。**プローブは基準幅 600px の両側で測ること** — issue-8・issue-9 で「プローブが実ページとズレていて破れを検出できない」事故が計2回起きているため |
+| B4<br>導出値 | 状態4のタイル5枚の `textContent` を順に読む。凡例の各行の `textContent` も読む | タイルは `['2.70', '35.2%', '25.9%', '5.6%', '22,894']`。**【2026-09-06 改訂】凡例は `['1位11回(20.4%)','2位8回(14.8%)','3位21回(38.9%)','4位14回(25.9%)']`（順位・回数・パーセンテージの3点。§3.5 改訂）。かつ回数の合計 11+8+21+14 が総試合数 54 と一致すること**（最大剰余法の担保。三麻状態5でも 36+41+43 = 120 を確認する）。中央は `54` `戦` と `194局`。**この値は `src/api/testdata/player_stats.json` の実レスポンスから §1.4・§1.5 の式で手計算したもの** |
+| B5 | `#/4/player/<実在ID>/summary` を開く（**実 API を叩けない環境では `fetch` を `src/api/testdata/*.json` を返すスタブに差し替えて実施してよい**。差し替えたことをレポートに明記する） | `[data-testid="rank-card"]` が層側に描画され、**`[data-testid="level-detail-card"]` と `rank-graph-placeholder` の後ろ**にある（`compareDocumentPosition` で確認）。コンソールエラー0。ページ本体に水平スクロールが無い（`scrollWidth <= clientWidth`）。**【2026-09-06 追加】ビューポート幅を2条件で測る: (a) 375px → カード幅 343px で縦積み（ドーナツ・凡例・タイルの `getBoundingClientRect().x` が同じ）、(b) 885px 相当 → カード幅 750px 前後で3カラム（3要素の `x` が相異なり、`y` が重なる）。両方で水平スクロールが出ないこと** |
 | B6<br>フィルタ連動 | B5 の状態でタイルと中央の `textContent` を記録 → 期間チップを「7日」に変更 | **値が変わる**（＝カード2はフィルタの影響を受ける）。かつ `[data-testid="identity-level"]` と `identity-meta` は**1文字も変わらない**（カード1の非連動が壊れていない）。**さらに操作中に `rank-card` の高さが変わらない**（loading を挟むため。R1 の実ページ確認） |
 | B7<br>色トークン | `#/__rank` の状態4で、4本の `.donut__seg` の `getComputedStyle(el).stroke` と `:root` の `--md-custom-color-rank-1..4` を突き合わせる | 4本とも一致。**トークン外の色が1つも無い**。凡例スウォッチの `background-color` も同様 |
 | B8<br>dark | `#/__rank` で `localStorage.setItem('mjsv:color-mode','dark')` → リロード | 全10状態が dark で描画され、弧が背景に埋もれない。`getComputedStyle(document.documentElement).colorScheme === 'dark'`。`--md-custom-color-rank-1..4` が §1.3 の dark 値（`#fed65b` / `#99a1a9` / `#ffb77b` / `#67c686`）と一致する。※ `prefers-color-scheme` のエミュレーションは `matchMedia` の `change` を発火しないため**必ず localStorage 経由で切り替える**（CLAUDE.md 既知の制約） |
@@ -718,10 +785,13 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 
 `docs/ui-verification/TEMPLATE.md` を複製して手順書を作る（統括担当の作業）。**機械で測れる項目を混ぜないこと**。
 
+**【2026-09-06】手順書を作成済み: [`docs/ui-verification/2026-09-06-issue-9-rank-donut.md`](../ui-verification/2026-09-06-issue-9-rank-donut.md)。本 PR 時点で未回収。** 下表の V2〜V7 を、実施しやすい順に V1〜V6 ＋ 主観 S1〜S3 として組み直してある（順位色そのものの当否は確認済みのため含めない）。
+
 | # | 委託内容 | 種別 |
 |---|---|---|
 | **V1**<br>【確認済み・実施不要】 | ~~light モードで `#/__rank` の状態4・5を開き、2位の「銀」（`#50585f`）が銀として読めるかを書く~~ | **オーナー確認済み（2026-09-05）**: 「順位色はライト・ダークいずれも悪くない」との回答を得た。light の銀 `#50585f` を含め、この委託は**実施不要**。§1.3・§3.2-c の実測メモは判断の記録として残す |
-| V2 | 実機スマホで `#/4/player/<ID>/summary` を開き、ドーナツと5タイルのバランス（ドーナツが大きすぎ／小さすぎないか、凡例が読めるか）を書く | ハードウェア依存＋主観。**【2026-09-05 前提改訂】** `.rank-card__chart` は常に1カラム（縦積み）で実装されている（§4.7）。「2カラムに収まるか」ではなく「縦積みでドーナツと凡例のバランスが窮屈でないか」を見てもらう |
+| V2 | 実機スマホ（縦積み）と PC ブラウザ（3カラム）の両方で `#/4/player/<ID>/summary` を開き、ドーナツ（240px）と凡例・5タイルのバランスを書く | ハードウェア依存＋主観。**【2026-09-06 前提改訂】** 1カラム固定は撤回し、`@container` の 600px 境界で縦積み / 3カラムが切り替わる（§4.7）。**両方のレイアウトを見てもらう** |
+| V7 | 凡例の `1位 11回 (20.4%)` という表記（順位・回数・パーセンテージの3点）が一目で読めるか、情報が多すぎないかを書く | **【2026-09-06 追加】** 書式変更がオーナー指示によるもので、読みやすさの当否は実機で見ないと判断できない |
 | V3 | OS のダークモードを**実際に切り替えて**、ドーナツ4色の識別しやすさを light/dark で比較して書く。「隣り合う2色が同じに見える」組み合わせがあれば記録する | エージェント環境で再現不能。§1.3 の隣接コントラスト 1.23 が実用に足るかの検証 |
 | V4 | 色覚特性のシミュレーション（OS のカラーフィルタ等）を使えるなら、1型・2型で4色が区別できるかを書く。使えない場合は「未実施」でよい | ハードウェア/OS 依存 |
 | V5 | 期間フィルタを何度か切り替え、カード2が読み込み中と表示中で**動かない**か（下のカードが上下しないか）を体感で書く | §3.4 R1 の主観確認 |
@@ -749,8 +819,12 @@ jsdom / `@testing-library/react` は未導入なので**React コンポーネン
 
 1. **【2026-09-05 解決】本家（amae-koromo）の順位色。** 外部アクセスを行っていないため実測はできなかったが、オーナーが「金・銀・銅・緑」（雀魂本家準拠）で確定し、`RANK_COLOR_SOURCES` に反映済み。UI検証 V1（ライト/ダークの見え方）もオーナー確認済みで実施不要（§7.4）。
 2. **実 API レスポンスでの動作確認をしていない。** 入力値は `src/api/testdata/player_stats.json`（issue-3 が保存した実レスポンス）と `src/domain/__fixtures__` に限られる。`rank_rates` が3・4以外の長さになる実例、`extended` が `null` になる実例は観測していない（型定義上は起こりうるので分岐を書いた）。B5・B6 で初めて実データにあたる。
-3. **【2026-09-05 解決】カードの高さが実ページで一致しなかった（検収 P2-1）。** 当初 `.rank-card__message` に固定 `min-height` を与える方式にしたが、三麻/四麻で `ready` 本文高さが異なるため単一の値では両立せず、`loading`/`error` の凡例スケルトン行の高さも `ready`（23px）と食い違っていた。是正: ①`.rank-card__chart` を常に1カラムにして幅依存をなくす、②スケルトン各行の高さを `ready` に実測して合わせる、③固定 `min-height` をやめ、`error` は `loading` と同じ構造を非表示で描いてメッセージを重ねる方式に変更（§3.4・§4.7）。実測: 四麻 loading/ready/error = 512px で一致、三麻 loading/ready = 481px で一致（カード内容幅311px・343px の両方で確認）。
-4. **【2026-09-05 解決】`.rank-card__chart` の2カラム機上計算は誤りだった。** 実測したカード内容幅は 311px で、2カラムに必要な 312px を**下回っており、本番では2カラムが一度も成立しない**ことが検収で判明した（机上計算が使ったカード内幅の見積り 311〜343 のうち、実際に効くのは下限の 311 だった）。是正として `flex-wrap: wrap` の保険をやめ、**常に1カラム（縦積み）**に変更した（§4.7）。
+3. **【2026-09-06 解決】カードの高さが実ページで一致しなかった（検収 P2-1）。** 当初 `.rank-card__message` に固定 `min-height` を与える方式にしたが、三麻/四麻で `ready` 本文高さが異なるため単一の値では両立せず、`loading`/`error` の凡例スケルトン行の高さも `ready` と食い違っていた。**是正の経緯は2段階ある。**
+   - 1段階目（2026-09-05）: ①`.rank-card__chart` を常に1カラムにして幅依存をなくす、②スケルトン各行の高さを `ready` に実測して合わせる、③固定 `min-height` をやめ `error` は `loading` と同じ構造を非表示で描いてメッセージを重ねる方式に変更。
+   - 2段階目（2026-09-06。**オーナー差し戻し**）: 「1カラム固定はスマホ以外で間延びする」との指摘により①を撤回。**真因は②であって①ではなかった**（§3.4）。さらに②も「実測値の焼き付け」では凡例の構成変更のたびに壊れる（実際に2回壊れた）ため、`--legend-row-height` 1変数から `ready` とスケルトンの両方が決まる形に改めた。③は維持。
+   - 最終実測（`document.fonts.ready` 後）: 縦積み側（343px）四麻 **556/556/556**・三麻 **524/524**、3カラム側（700px）四麻 **330/330/330**・三麻 **330/330**。実ページ（375px ビューポート）でカード高 556px、（885px ビューポート）で 330px と、プローブと一致することを確認済み。
+4. **【2026-09-06 解決】`.rank-card__chart` の2カラム機上計算は誤りだった。** 実測したカード内容幅は 311px（375px ビューポート時）で、当初想定した2カラムには足りなかった。最終仕様は `@container` による **600px 境界の縦積み / 3カラム切替**（§4.7）で、375px では縦積み、885px ビューポート（カード幅 758px）では3カラムが成立することを実測済み（ドーナツ x=112 / 凡例 x=368 / タイル x=601、いずれも同一行）。
+9. **凡例の回数の合計は、試合数が数千を超えると総試合数から 1〜2 ズレる。** API の `rank_rates` が小数4桁丸めで合計 1.0 に満たない（実データ 0.9998）ことに起因する原理的な限界で、最大剰余法で配れる端数の個数が `rank_rates.length` に制限されるため。ズレの上限は試合数の 0.02% 未満。**補正しない**と判断した根拠は §3.5。dev ギャラリー状態9（12,345戦）で実際にこのズレが観測できる。
 5. **`stroke-dasharray` の `transition` がスライス数の変わる遷移（四麻↔三麻）で破綻しないかは未確認。** プレイヤーページの `numPlayers` 切替時に起きうる。破綻したら `transition` を外す（見た目の劣化のみで機能は保たれる）。
 6. **§1.3 の隣接コントラスト 1.22〜1.23 が実用に足るかは主観判断。** 隙間（`DONUT_GAP`）と凡例のテキストで補う設計にしたが、**実機での見え方は V3・V4 で初めて評価される**。
 7. **`--md-custom-color-rank-*` のトークン名が MD3 の慣習に沿うかは確認していない。** 既存の `--md-custom-color-win` 等と同じ接頭辞に揃えただけである。
