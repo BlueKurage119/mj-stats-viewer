@@ -21,6 +21,10 @@ async function bootstrap() {
         const { IdentityGallery } = await import('./dev/IdentityGallery');
         return <IdentityGallery />;
       },
+      '#/__rank': async () => {
+        const { RankGallery } = await import('./dev/RankGallery');
+        return <RankGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {
