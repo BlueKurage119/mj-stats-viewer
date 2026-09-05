@@ -513,22 +513,39 @@
     gap: 16px;
   }
 
+  /*
+   * 各カラムは**中身の幅に合わせる**（`flex: 0 1 auto`）。余った横幅は
+   * `justify-content: space-between` でカラムとカラムの「間」に逃がす。
+   *
+   * 以前は `flex: 2 1 0` / `1 1 0` で余白を各カラムに比例配分していたため、中身が伸びない
+   * 凡例やタイルの内側が空白だらけになっていた（オーナー指摘「第3カラムがスカスカ」。
+   * 実測: 凡例カラム 405px に対し中身 230px、タイル 331px に対し中身 110px）。
+   * 空白を列の内側ではなく列の間に置くと、意図した余白として読める。
+   */
+  /* ドーナツと凡例は中身の幅で足りる。余った横幅はタイルに回す */
   .rank-card__chart {
-    flex: 2 1 0;
+    flex: 0 1 auto;
     flex-direction: row;
     align-items: center;
     min-width: 0;
   }
 
   .rank-card__legend {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     width: auto;
     min-width: 0;
   }
 
+  /*
+   * タイルは残り幅を受け取り、**幅に応じて2〜3段に積む**（オーナー指示）。
+   * 以前は 1 カラム固定だったため、幅の広い画面で「1枚 331px の箱に中身 110px」という
+   * スカスカな縦長リストになっていた。auto-fit にすると 1040px 幅のカードで3列（3+2）、
+   * 狭くなるにつれ 2列 → 1列と自然に落ちる。170px は「5枚が 3+2 に割れる」ことを実測で選んだ値（140px だと4列になり2段目に1枚だけ残る）。
+   */
   .rank-card__tiles {
-    flex: 1 1 0;
-    min-width: 140px;
-    grid-template-columns: 1fr;
+    flex: 1 1 auto;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    align-content: center;
   }
 }
