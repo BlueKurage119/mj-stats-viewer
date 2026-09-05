@@ -5,12 +5,23 @@
   width: 100%;
 }
 
+/*
+ * md-chip-set の :host は `display:flex; flex-wrap:wrap; gap:8px` を持つ。display と gap は
+ * 下で上書きしているが flex-wrap が漏れており、overflow-x:auto が効く前に折り返していた（#40）。
+ * nowrap を明示しないと「狭幅で横スクロール、縦には積まない」（issue-6 §3.7）が成立しない。
+ */
 .filter-bar__row {
   display: flex;
+  flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
   gap: 8px;
   padding-bottom: 2px;
+}
+
+/* チップが縮んでラベルが折り返さないようにする（横スクロールに逃がす） */
+.filter-bar__row > * {
+  flex: 0 0 auto;
 }
 
 .filter-bar__row::-webkit-scrollbar {
