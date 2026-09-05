@@ -55,14 +55,9 @@ export function seedForRank(rank: RankKey | null): string {
   return rank === null ? DEFAULT_SEED : RANK_SEEDS[rank];
 }
 
-/** 順位色のキー（1位〜4位。三麻の最下位も rank-4 を使う。設計書 issue-9 §3.2-d） */
+/** 順位色のキー（1位〜4位。三麻は1〜3位に rank-1..rank-3 を使う。rank-4 は四麻の4位専用。設計書 issue-9 §3.2-d） */
 export type RankColorKey = 'rank-1' | 'rank-2' | 'rank-3' | 'rank-4';
 
-/**
- * 順位色の色相ソース。差し替えはこのオブジェクトの編集のみで完結する。
- * 【未確定】本家（amae-koromo）準拠の値は未確認（外部アクセス禁止のため）。V1（オーナー確認）待ち。
- * 詳細: docs/design/issue-9-rank-donut.md §3.2-c
- */
 /**
  * 順位色の元値。**雀魂本家準拠で「金・銀・銅・緑」**（オーナー確定・2026-09-05）。
  *
@@ -76,8 +71,8 @@ export type RankColorKey = 'rank-1' | 'rank-2' | 'rank-3' | 'rank-4';
 export const RANK_COLOR_SOURCES: Record<RankColorKey, string> = {
   'rank-1': '#D4AF37', // 1位: 金
   'rank-2': '#A8B0B8', // 2位: 銀（色相240の低彩度。青寄せの調整余地あり）
-  'rank-3': '#B87333', // 3位（四麻のみ）: 銅
-  'rank-4': '#3E9E62', // ラス: 緑
+  'rank-3': '#B87333', // 3位（四麻・三麻とも）: 銅
+  'rank-4': '#3E9E62', // 4位（四麻のみ・メダル圏外）: 緑
 };
 
 /**

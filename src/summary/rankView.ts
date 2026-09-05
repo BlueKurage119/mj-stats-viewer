@@ -16,10 +16,15 @@ export const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
 
 const RANK_LABELS = ['1位', '2位', '3位', '4位'] as const;
 
-/** 四麻・三麻それぞれの colorToken 割当（§3.2-d。最下位は常に rank-4） */
+/**
+ * 四麻・三麻それぞれの colorToken 割当（§3.2-d 改訂）。
+ * 色は「意味（良し悪し）」ではなく「順位という位置」で割り当てる（メダル配色）ため、
+ * 三麻も順位インデックスをそのまま rank-1..rank-3 に対応させる。
+ * rank-4（緑）はメダル圏外を表すので四麻の4位にしか現れない。
+ */
 const COLOR_TOKENS_BY_LENGTH: Record<3 | 4, readonly RankColorKey[]> = {
   4: ['rank-1', 'rank-2', 'rank-3', 'rank-4'],
-  3: ['rank-1', 'rank-2', 'rank-4'],
+  3: ['rank-1', 'rank-2', 'rank-3'],
 };
 
 export interface RankSlice {

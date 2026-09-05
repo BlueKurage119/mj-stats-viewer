@@ -66,10 +66,10 @@ describe('rankView: buildRankView', () => {
     expect(view!.slices.map((s) => s.colorToken)).toEqual(['rank-1', 'rank-2', 'rank-3', 'rank-4']);
   });
 
-  it('U4: 三麻の3スライス目の色トークンが rank-4 になる（rank-3 でないこと）', () => {
+  it('U4: 三麻の3スライス目の色トークンが rank-3 になる（rank-4 でないこと）', () => {
     const view = buildRankView({ stats: make3pStats(), extended: null });
-    expect(view!.slices.map((s) => s.colorToken)).toEqual(['rank-1', 'rank-2', 'rank-4']);
-    expect(view!.slices[2].colorToken).not.toBe('rank-3');
+    expect(view!.slices.map((s) => s.colorToken)).toEqual(['rank-1', 'rank-2', 'rank-3']);
+    expect(view!.slices[2].colorToken).not.toBe('rank-4');
   });
 
   it('U5: arcOffset が累積割合×円周の負値になる（先頭は -0、2番目は -(C*rates[0])）', () => {
@@ -172,5 +172,12 @@ describe('rankView: buildRankView', () => {
   it('gameCountText が試合数の3桁区切り文字列になる', () => {
     const view = buildRankView({ stats: make4pStats(), extended: null });
     expect(view!.gameCountText).toBe('54');
+  });
+
+  it('P3-1: gameCountText/roundCountText が4桁以上でも3桁区切りになる（12345戦 / 56789局）', () => {
+    const stats = make4pStats({ gameCount: 12345 });
+    const view = buildRankView({ stats, extended: makeExtended(56789) });
+    expect(view!.gameCountText).toBe('12,345');
+    expect(view!.roundCountText).toBe('56,789');
   });
 });
