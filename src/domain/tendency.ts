@@ -1,7 +1,8 @@
 /**
  * 傾向2軸（攻守 / 副露速度）と5段階バンド。
- * 係数は全項目等係数（符号のみ）とし、有効な項の単純平均を取る。
- * 詳細: docs/design/issue-4-domain-logic.md §5.3
+ * 係数は全項目等係数（符号のみ）とし、有効な項を合成して単位 SD に正規化する
+ * （Σ(有効な項) / sqrt(有効な項数)）。
+ * 詳細: docs/design/issue-4-domain-logic.md §5.3 / docs/design/issue-10-playstyle.md §3.1
  */
 
 import type { PlayerExtendedStats } from '../api';
@@ -17,8 +18,9 @@ function zScore(lookup: (metric: string) => MetricDistribution | null, metric: s
   return (deviationValue(x, d) - 50) / 10;
 }
 
-function average(values: readonly number[]): number {
-  return values.reduce((a, b) => a + b, 0) / values.length;
+/** 単位 SD への正規化: Σ(values) / sqrt(項数)（項数1のときはその値そのもの） */
+function normalizedRenamed(values: readonly number[]): number {
+  return values.reduce((a, b) => a + b, 0) / Math.sqrt(values.length);
 }
 
 export function calcTendency(stats: TendencyInput, lookup: (metric: string) => MetricDistribution | null): Tendency {
@@ -31,7 +33,7 @@ export function calcTendency(stats: TendencyInput, lookup: (metric: string) => M
     (v): v is number => v !== null,
   );
   const offenseDefense: TendencyAxis = offenseTerms.length
-    ? { value: average(offenseTerms), band: toBand(average(offenseTerms)) }
+    ? { value: normalizedRenamed(offenseTerms), band: toBand(normalizedRenamed(offenseTerms)) }
     : null;
 
   const zFuro = zScore(lookup, '副露率', stats.副露率);
@@ -41,7 +43,7 @@ export function calcTendency(stats: TendencyInput, lookup: (metric: string) => M
     (v): v is number => v !== null,
   );
   const concealedSpeed: TendencyAxis = speedTerms.length
-    ? { value: average(speedTerms), band: toBand(average(speedTerms)) }
+    ? { value: normalizedRenamed(speedTerms), band: toBand(normalizedRenamed(speedTerms)) }
     : null;
 
   return { offenseDefense, concealedSpeed };
