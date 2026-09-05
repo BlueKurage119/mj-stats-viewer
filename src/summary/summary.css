@@ -226,3 +226,187 @@
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
+
+/*
+ * カード2（成績・順位分布ドーナツ）。issue-9 §4.5・§4.7。
+ * 高さの規律（issue-8 §5.3 H1 と同じ）: loading / ready / error で `.rank-card` の高さを一致させる。
+ */
+
+.rank-card {
+  display: block;
+  box-sizing: border-box;
+}
+
+.rank-card__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rank-card__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__chart {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.donut {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+}
+
+.donut__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.donut__track {
+  stroke: var(--md-sys-color-surface-container-highest);
+}
+
+.donut__seg {
+  transition: stroke-dasharray 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donut__seg {
+    transition: none;
+  }
+}
+
+.donut__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.rank-card__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+}
+
+.rank-card__games {
+  color: var(--md-sys-color-on-surface);
+}
+
+.rank-card__games-unit,
+.rank-card__rounds {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 96px;
+  min-width: 96px;
+}
+
+.rank-card__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rank-card__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--swatch);
+  flex: 0 0 auto;
+}
+
+.rank-card__legend-label {
+  color: var(--md-sys-color-on-surface);
+  flex: 1 1 auto;
+}
+
+.rank-card__legend-value {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.rank-card__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rank-card__tile dt {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rank-card__tile dd {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+/*
+ * 実測: 375px 幅で ready の本文（ドーナツ200px + gap12 + タイル100px）は 312px（issue-9 製造時実測）。
+ * error はこの min-height で ready と同じ `.rank-card` 高さに揃える（§3.4 R1）。
+ */
+.rank-card__message {
+  color: var(--md-sys-color-error);
+  min-height: 312px;
+  margin: 0;
+}
+
+.rank-card__skeleton {
+  display: block;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+}
+
+/* 中央の穴のプレースホルダ（読み込み中の「◯戦」相当） */
+.donut__center .rank-card__skeleton {
+  width: 64px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+/* 凡例1行 = スウォッチのプレースホルダ + ラベル/値のプレースホルダ */
+.rank-card__legend-item .rank-card__skeleton:first-child {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.rank-card__legend-item .rank-card__skeleton:last-child {
+  width: 96px;
+  height: 16px;
+  flex: 1 1 auto;
+}
+
+/* 実測: ready のタイル本文（dt+dd、gap 2px）の高さは 46px（issue-9 製造時実測） */
+.rank-card__tile .rank-card__skeleton {
+  width: 100%;
+  height: 46px;
+}
