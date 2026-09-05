@@ -54,3 +54,28 @@ export function rankFromLevelId(levelId: number | undefined): RankKey | null {
 export function seedForRank(rank: RankKey | null): string {
   return rank === null ? DEFAULT_SEED : RANK_SEEDS[rank];
 }
+
+/** 順位色のキー（1位〜4位。三麻の最下位も rank-4 を使う。設計書 issue-9 §3.2-d） */
+export type RankColorKey = 'rank-1' | 'rank-2' | 'rank-3' | 'rank-4';
+
+/**
+ * 順位色の色相ソース。差し替えはこのオブジェクトの編集のみで完結する。
+ * 【未確定】本家（amae-koromo）準拠の値は未確認（外部アクセス禁止のため）。V1（オーナー確認）待ち。
+ * 詳細: docs/design/issue-9-rank-donut.md §3.2-c
+ */
+export const RANK_COLOR_SOURCES: Record<RankColorKey, string> = {
+  'rank-1': '#F5A623', // 1位: 金
+  'rank-2': '#3D7BC4', // 2位: 青
+  'rank-3': '#2A9D8F', // 3位（四麻のみ）: 青緑
+  'rank-4': '#D0454C', // ラス: 赤
+};
+
+/**
+ * 順位ごとに違うトーンを当てる。
+ * MD3 の customColor ロール（light 40 / dark 80 固定）を使うと4色の輝度が揃い、
+ * 隣接コントラストが 1.00 になってグレースケールで区別できなくなる（設計書 issue-9 §1.2 実測）。
+ */
+export const RANK_COLOR_TONES: Record<'light' | 'dark', Record<RankColorKey, number>> = {
+  light: { 'rank-1': 56, 'rank-2': 37, 'rank-3': 50, 'rank-4': 43 },
+  dark: { 'rank-1': 87, 'rank-2': 66, 'rank-3': 80, 'rank-4': 73 },
+};
