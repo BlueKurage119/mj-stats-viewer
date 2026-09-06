@@ -1,0 +1,109 @@
+.stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stats-panel__count {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-section__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.stats-section__note {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.stats-section__list {
+  /* 1行アイテムに変わったので one-line 側を詰める（既定 56px） */
+  --md-list-item-one-line-container-height: 48px;
+  --md-list-item-top-space: 4px;
+  --md-list-item-bottom-space: 4px;
+  /* 値テキストの既定は label-small(11px) で小さすぎる */
+  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-body-medium-size);
+  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-body-medium-line-height);
+  --md-list-item-trailing-supporting-text-weight: 500;
+  --md-list-item-trailing-supporting-text-color: var(--md-sys-color-on-surface);
+}
+
+.stats-row {
+  position: relative;
+}
+
+/* 注記が無い行のラベルには点線も cursor:help も付けない（R-14）。
+   点線は「hover すると説明が出る」という約束なので、出ない行に付けると嘘になる */
+.stats-row__label {
+  color: var(--md-sys-color-on-surface);
+}
+
+.stats-row__label--tip {
+  text-decoration: underline dotted 1px;
+  text-underline-offset: 3px;
+  cursor: help;
+  outline-offset: 2px;
+}
+
+.stats-row__value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-row__skeleton-label {
+  display: inline-block;
+  height: 16px;
+  width: 96px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+  opacity: 0.6;
+}
+
+.stats-row__skeleton-value {
+  display: inline-block;
+  height: 16px;
+  width: 48px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+  opacity: 0.6;
+}
+
+.stats-row__tip {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 10px);
+  left: 12px;
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  /* 既定は非表示。display:none にはしない（aria-describedby を殺さないため） */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.stats-row:hover .stats-row__tip,
+.stats-row:focus-within .stats-row__tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-row__tip {
+    transition: none;
+  }
+}

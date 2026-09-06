@@ -41,6 +41,10 @@ async function bootstrap() {
         const { CompareGallery } = await import('./dev/CompareGallery');
         return <CompareGallery />;
       },
+      '#/__stats': async () => {
+        const { StatsGallery } = await import('./dev/StatsGallery');
+        return <StatsGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {
