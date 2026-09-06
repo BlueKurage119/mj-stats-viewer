@@ -63,6 +63,16 @@ export function getBandZeroHistogram(gh: GlobalHistogram, mode: GameMode, metric
   return gh[String(mode)]?.['0']?.[metric]?.histogramFull ?? null;
 }
 
+/**
+ * GlobalHistogram から band "0" の API 提供 mean（卓平均）を引く。無ければ null。
+ * histogramStats() のビン中央値近似とは別物であり、卓平均の基準にはこちらを使う
+ * （issue-11 §1.2）。
+ */
+export function getBandZeroMean(gh: GlobalHistogram, mode: GameMode, metric: string): number | null {
+  const mean = gh[String(mode)]?.['0']?.[metric]?.mean;
+  return typeof mean === 'number' && Number.isFinite(mean) ? mean : null;
+}
+
 /** metric → MetricDistribution の遅延ルックアップ（呼び出しごとに新規生成される閉包でキャッシュする） */
 export function createStatsLookup(
   gh: GlobalHistogram,

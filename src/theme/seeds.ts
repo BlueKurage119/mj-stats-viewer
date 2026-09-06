@@ -84,3 +84,19 @@ export const RANK_COLOR_TONES: Record<'light' | 'dark', Record<RankColorKey, num
   light: { 'rank-1': 56, 'rank-2': 37, 'rank-3': 50, 'rank-4': 43 },
   dark: { 'rank-1': 87, 'rank-2': 66, 'rank-3': 80, 'rank-4': 73 },
 };
+
+/**
+ * 差分チップの「良い」側の色。
+ *
+ * 段位シードから独立させる理由（issue-11 §1.5 実測）:
+ * 雀聖シード（#D32F2F）の --md-sys-color-primary は light `#ba1a20` / dark `#ffb3ac` で、
+ * シード非依存の --md-sys-color-error（`#ba1a1a` / `#ffb4ab`）とほぼ同色になる。
+ * primary / tertiary を「良い」に使うと、雀聖のプレイヤーで良い差分と悪い差分が同色になり破綻する。
+ *
+ * トーンは error とのコントラスト対称性で選んだ（ElevatedCard 背景 = surface-container-low に対し
+ * 全5シードで light 5.81〜5.84 / dark 10.01〜10.06。error は light 5.83〜5.86 / dark 10.07〜10.13）。
+ * MD3 の customColor ロール（light 40 / dark 80）と同値だが、customColors 経由にすると
+ * on-color / container まで4トークン増えるため、順位色と同じく TonalPalette から1トークンだけ出す。
+ */
+export const DELTA_GOOD_SOURCE = '#2E7D32';
+export const DELTA_GOOD_TONES: Record<'light' | 'dark', number> = { light: 40, dark: 80 };

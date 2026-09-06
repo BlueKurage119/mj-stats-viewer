@@ -40,7 +40,14 @@ export type { StableLevel, StableLevelInput } from './stableLevel';
 export { estimateStableLevel, estimateStableLevel2, splitStableLevelNumber } from './stableLevel';
 
 export type { MetricDistribution } from './distribution';
-export { createStatsLookup, deviationValue, getBandZeroHistogram, histogramStats, percentile } from './distribution';
+export {
+  createStatsLookup,
+  deviationValue,
+  getBandZeroHistogram,
+  getBandZeroMean,
+  histogramStats,
+  percentile,
+} from './distribution';
 
 export type { RadarAxes, RadarInput } from './radar';
 export { calcRadar } from './radar';

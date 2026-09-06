@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createStatsLookup, deviationValue, getBandZeroHistogram, histogramStats, percentile } from './distribution';
+import {
+  createStatsLookup,
+  deviationValue,
+  getBandZeroHistogram,
+  getBandZeroMean,
+  histogramStats,
+  percentile,
+} from './distribution';
 import type { GlobalHistogram, HistogramData } from '../api';
 import globalHistogramRaw from './__fixtures__/global_histogram.json';
 
@@ -64,6 +71,28 @@ describe('distribution: getBandZeroHistogram', () => {
 
   it('band 0 を持たないモードは null', () => {
     expect(getBandZeroHistogram(gh, 9, '和牌率')).toBe(null);
+  });
+});
+
+describe('distribution: getBandZeroMean（issue-11 §1.2: API の mean を直接読む。ビン中央値近似とは別物）', () => {
+  it('mode16/和牌率でAPIのmean(0.2093)を厳密に返す。histogramStatsの近似値とは異なる', () => {
+    const mean = getBandZeroMean(gh, 16, '和牌率');
+    expect(mean).toBe(0.2093);
+    const approx = histogramStats(wakachiHistogram()).mean;
+    expect(mean).not.toBe(approx);
+  });
+
+  it('未知metricはnull', () => {
+    expect(getBandZeroMean(gh, 16, '存在しない指標')).toBe(null);
+  });
+
+  it('未知modeはnull', () => {
+    expect(getBandZeroMean(gh, 8, '和牌率')).toBe(null);
+  });
+
+  it('存在しないbandはnull', () => {
+    const ghWithoutBandZero: GlobalHistogram = { '16': { '1': { 和牌率: { mean: 0.5 } } } };
+    expect(getBandZeroMean(ghWithoutBandZero, 16, '和牌率')).toBe(null);
   });
 });
 

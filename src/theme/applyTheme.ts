@@ -6,7 +6,15 @@ import {
   type CustomColorGroup,
   type Theme,
 } from '@material/material-color-utilities';
-import { RANK_COLOR_SOURCES, RANK_COLOR_TONES, SECTION_COLORS, type RankColorKey, type SectionKey } from './seeds';
+import {
+  DELTA_GOOD_SOURCE,
+  DELTA_GOOD_TONES,
+  RANK_COLOR_SOURCES,
+  RANK_COLOR_TONES,
+  SECTION_COLORS,
+  type RankColorKey,
+  type SectionKey,
+} from './seeds';
 
 /**
  * `@material/material-color-utilities` 0.3.0 には `applyTheme()` が存在するが、
@@ -27,6 +35,9 @@ const customColorDefs = sectionKeys.map((key) => ({
 const themeCache = new Map<string, Theme>();
 
 const rankColorKeys = Object.keys(RANK_COLOR_SOURCES) as RankColorKey[];
+
+/** 差分チップの「良い」色。1色しか無いのでキャッシュ Map は不要（issue-11 §5.2） */
+const deltaGoodPalette = TonalPalette.fromInt(argbFromHex(DELTA_GOOD_SOURCE));
 
 /** 色相ソースごとの TonalPalette をメモ化する（取りうるソースは4種のみ） */
 const rankPaletteCache = new Map<string, TonalPalette>();
@@ -147,6 +158,12 @@ export function applyMd3Theme(seed: string, dark: boolean): void {
     const palette = rankPalette(key);
     root.style.setProperty(`--md-custom-color-${key}`, hexFromArgb(palette.tone(rankTones[key])));
   }
+
+  // 差分チップの「良い」色 → --md-custom-color-delta-good（段位シードから独立。issue-11 §5）
+  root.style.setProperty(
+    '--md-custom-color-delta-good',
+    hexFromArgb(deltaGoodPalette.tone(dark ? DELTA_GOOD_TONES.dark : DELTA_GOOD_TONES.light)),
+  );
 
   // ネイティブUI・スクロールバーの追従と FOUC 対策スクリプトとの整合
   root.style.colorScheme = dark ? 'dark' : 'light';
