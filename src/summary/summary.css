@@ -843,9 +843,17 @@
   min-width: 0;
 }
 
-/* R1 の生命線: ready 側・loading 側とも同じ変数から行の高さが決まる */
+/*
+ * R1 の生命線: ready 側・loading 側とも同じ変数から行の高さが決まる。
+ * `min-height` だけでは下限しか決まらず、ready 側の実テキストの行ボックスが
+ * フォントの line-height 次第で変数を超えて loading/error（空要素）とずれる
+ * （検収差し戻しで実測: delta 20px→23px、カード全体 256px→262px）。
+ * `height` で固定し、`line-height` も同じ変数に揃えることで、行ボックス自体の
+ * 高さをテキストの有無・フォント指標に依存させない。
+ */
 .key-stats-card__value {
-  min-height: var(--key-stats-value-height);
+  height: var(--key-stats-value-height);
+  line-height: var(--key-stats-value-height);
   margin: 0;
   color: var(--md-sys-color-on-surface);
   display: flex;
@@ -853,7 +861,8 @@
 }
 
 .key-stats-card__delta {
-  min-height: var(--key-stats-delta-height);
+  height: var(--key-stats-delta-height);
+  line-height: var(--key-stats-delta-height);
   display: flex;
   align-items: center;
   gap: 2px;
