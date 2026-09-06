@@ -264,4 +264,11 @@ describe('StatsSection & DOM structure', () => {
     const rankHtml = renderToStaticMarkup(<StatsSection section={rankSection} />);
     expect(rankHtml).toContain('stats-table__cell--value md-typescale-title-medium numeric');
   });
+
+  // 和銃分布テーブル: セル幅 2:1:1 固定用のクラス
+  it('和銃分布テーブルに stats-table--dist クラスが付与されている', () => {
+    const distSection = sections4p.find((s) => s.id === 'distribution')!;
+    const distHtml = renderToStaticMarkup(<StatsSection section={distSection} />);
+    expect(distHtml).toContain('stats-table stats-table--dist');
+  });
 });

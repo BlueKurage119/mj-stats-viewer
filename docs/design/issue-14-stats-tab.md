@@ -799,6 +799,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 > **2026-09-07 UI調整で上書き**:
 > - 各セクションを包むカード `.stats-section-card` に `padding: 16px` を設定。
 > - 表形式セクション（`.stats-table`）のレイアウト・ボーダー・パディングを設定。
+> - 和銃分布テーブル（`.stats-table--dist`）: 放銃時「約」による列幅のズレを防ぎ3つの表で縦の列を揃えるため、`table-layout: fixed` および列幅比率 2:1:1（50%:25%:25%）を設定。
 > - 値の文字サイズ: リスト行の値（`.stats-row__value`）および表の数値セル（`.stats-table__cell--value`）を `var(--md-sys-typescale-title-medium-size)`（16px）かつ太字 `500` に拡大し、ラベル（`body-medium`: 14px）より大きく表示。
 > - ツールチップトリガーの限定: ラベルの点線下線・`cursor: help` を撤去し、`.stats-row__info-btn`（Material Icon `info`）を配置。ツールチップは `.stats-row:has(.stats-row__info-btn:hover)` および `.stats-row:has(.stats-row__info-btn:focus-visible)` でのみ表示する。
 

@@ -108,6 +108,23 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* 和銃分布テーブル: 3つの表で縦の列を揃えるためセル幅を 2:1:1 (50%:25%:25%) に固定 */
+.stats-table--dist {
+  table-layout: fixed;
+}
+
+.stats-table--dist th:first-child,
+.stats-table--dist td:first-child {
+  width: 50%;
+}
+
+.stats-table--dist th:nth-child(2),
+.stats-table--dist td:nth-child(2),
+.stats-table--dist th:nth-child(3),
+.stats-table--dist td:nth-child(3) {
+  width: 25%;
+}
+
 /* ==========================================================================
    リスト形式（その他7セクション）
    ========================================================================== */
