@@ -5,6 +5,7 @@ import type { CompareMetric } from './compareMetrics';
 import { Histogram } from './Histogram';
 import {
   cropHistogram,
+  formatMeanNote,
   formatMetricValue,
   toTopPercent,
 } from './histogramView';
@@ -68,6 +69,9 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
   }
   const ariaLabel = ariaParts.join('、');
 
+  // 卓平均・段位平均の併記テキスト生成
+  const meanNoteText = formatMeanNote(tableMean, levelMean, metric.unit);
+
   return (
     <div
       className="histogram-card"
@@ -97,11 +101,21 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
 
       <div className="histogram-card__value-row">
         {loading ? (
-          <div className="histogram-card__skeleton" style={{ width: '80px', height: '28px' }} />
+          <>
+            <div className="histogram-card__skeleton" style={{ width: '80px', height: '28px' }} />
+            <div className="histogram-card__skeleton" style={{ width: '100px', height: '14px' }} />
+          </>
         ) : (
-          <span className="histogram-card__value md-typescale-headline-medium">
-            {formatMetricValue(value, metric.unit)}
-          </span>
+          <>
+            <span className="histogram-card__value md-typescale-headline-medium">
+              {formatMetricValue(value, metric.unit)}
+            </span>
+            {meanNoteText ? (
+              <span className="histogram-card__mean-note md-typescale-label-small">
+                {meanNoteText}
+              </span>
+            ) : null}
+          </>
         )}
       </div>
 

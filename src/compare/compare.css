@@ -133,6 +133,13 @@
   line-height: 1;
 }
 
+.histogram-card__mean-note {
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .histogram-card__graph-area {
   height: var(--hist-height);
   position: relative;

@@ -3,7 +3,7 @@ import type { HistogramData } from '../api';
 import {
   buildHistogramPath,
   getMarkerPosition,
-  HISTOGRAM_VIEWBOX_HEIGHT,
+  HISTOGRAM_TOTAL_HEIGHT,
   HISTOGRAM_VIEWBOX_WIDTH,
   type HistogramWindow,
 } from './histogramView';
@@ -56,7 +56,7 @@ export function Histogram(props: HistogramProps): ReactElement {
   return (
     <svg
       className="histogram-svg"
-      viewBox={`0 0 ${HISTOGRAM_VIEWBOX_WIDTH} ${HISTOGRAM_VIEWBOX_HEIGHT}`}
+      viewBox={`0 0 ${HISTOGRAM_VIEWBOX_WIDTH} ${HISTOGRAM_TOTAL_HEIGHT}`}
       preserveAspectRatio="none"
       role="img"
       aria-label={ariaLabel}
@@ -74,7 +74,7 @@ export function Histogram(props: HistogramProps): ReactElement {
           x1={tablePos.x}
           y1={0}
           x2={tablePos.x}
-          y2={HISTOGRAM_VIEWBOX_HEIGHT}
+          y2={HISTOGRAM_TOTAL_HEIGHT}
           className="histogram-marker-table"
           vectorEffect="non-scaling-stroke"
           data-marker="table"
@@ -88,7 +88,7 @@ export function Histogram(props: HistogramProps): ReactElement {
           x1={levelPos.x}
           y1={0}
           x2={levelPos.x}
-          y2={HISTOGRAM_VIEWBOX_HEIGHT}
+          y2={HISTOGRAM_TOTAL_HEIGHT}
           className="histogram-marker-level"
           vectorEffect="non-scaling-stroke"
           data-marker="level"
@@ -102,7 +102,7 @@ export function Histogram(props: HistogramProps): ReactElement {
           x1={selfPos.x}
           y1={0}
           x2={selfPos.x}
-          y2={HISTOGRAM_VIEWBOX_HEIGHT}
+          y2={HISTOGRAM_TOTAL_HEIGHT}
           className="histogram-marker-self"
           vectorEffect="non-scaling-stroke"
           data-marker="self"

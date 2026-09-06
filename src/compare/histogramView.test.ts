@@ -6,6 +6,7 @@ import type { GlobalHistogram, HistogramData } from '../api';
 import {
   buildHistogramPath,
   cropHistogram,
+  formatMeanNote,
   formatMetricValue,
   getLevelBandMean,
   getMarkerPosition,
@@ -145,13 +146,44 @@ describe('histogramView', () => {
     });
   });
 
+  describe('formatMeanNote', () => {
+    it('formats both tableMean and levelMean when provided', () => {
+      const text = formatMeanNote(0.209, 0.215, 'rate');
+      expect(text).toBe('卓平均 20.9%　段位平均 21.5%');
+    });
+
+    it('formats only tableMean when levelMean is null or undefined', () => {
+      expect(formatMeanNote(0.209, null, 'rate')).toBe('卓平均 20.9%');
+      expect(formatMeanNote(0.209, undefined, 'rate')).toBe('卓平均 20.9%');
+    });
+
+    it('formats only levelMean when tableMean is null or undefined', () => {
+      expect(formatMeanNote(null, 0.215, 'rate')).toBe('段位平均 21.5%');
+      expect(formatMeanNote(undefined, 0.215, 'rate')).toBe('段位平均 21.5%');
+    });
+
+    it('returns null when both are null or undefined or invalid', () => {
+      expect(formatMeanNote(null, null, 'rate')).toBeNull();
+      expect(formatMeanNote(undefined, undefined, 'rate')).toBeNull();
+      expect(formatMeanNote(NaN, null, 'rate')).toBeNull();
+      expect(formatMeanNote(null, Infinity, 'rate')).toBeNull();
+    });
+
+    it('supports point and turn units correctly', () => {
+      expect(formatMeanNote(1500, 1600, 'point')).toBe('卓平均 1,500　段位平均 1,600');
+      expect(formatMeanNote(11.2, 11.5, 'turn')).toBe('卓平均 11.20巡　段位平均 11.50巡');
+    });
+  });
+
   describe('buildHistogramPath', () => {
-    it('generates a valid SVG path d string', () => {
+    it('generates a valid SVG path d string with overshoot headroom', () => {
       const winRateHist = gh['16']['0']['和牌率'].histogramFull!;
       const winCrop = cropHistogram(winRateHist)!;
       const d = buildHistogramPath(winRateHist, winCrop);
-      expect(d.startsWith('M 0,72')).toBe(true);
-      expect(d.endsWith('L 320,72 Z')).toBe(true);
+      expect(d.startsWith('M 0,80')).toBe(true);
+      expect(d.endsWith('L 320,80 Z')).toBe(true);
+      // 最頻値の上端は y = HISTOGRAM_MARKER_OVERSHOOT (8.00) に達する
+      expect(d.includes(',8.00')).toBe(true);
     });
   });
 

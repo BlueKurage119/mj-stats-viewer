@@ -11,6 +11,8 @@ import { COMPARE_METRICS, type MetricDirection, type MetricUnit } from './compar
 export const CROP_TAIL_RATIO = 0.0005; // 両裾それぞれ 0.05%
 export const HISTOGRAM_VIEWBOX_WIDTH = 320;
 export const HISTOGRAM_VIEWBOX_HEIGHT = 72;
+export const HISTOGRAM_MARKER_OVERSHOOT = 8; // マーカーが最頻値バーより突き出る高さ
+export const HISTOGRAM_TOTAL_HEIGHT = HISTOGRAM_VIEWBOX_HEIGHT + HISTOGRAM_MARKER_OVERSHOOT; // 80
 
 /** 表示窓。bin インデックスの閉区間 [lo, hi] と、それに対応する値域 */
 export interface HistogramWindow {
@@ -126,6 +128,25 @@ export function formatMetricValue(value: number | null | undefined, unit: Metric
   }
 }
 
+/**
+ * ヒストグラムカードの value-row に併記する卓平均・段位平均テキストを生成する。
+ * 両方 null または無効な場合は null を返す。
+ */
+export function formatMeanNote(
+  tableMean: number | null | undefined,
+  levelMean: number | null | undefined,
+  unit: MetricUnit
+): string | null {
+  const notes: string[] = [];
+  if (tableMean !== null && tableMean !== undefined && Number.isFinite(tableMean)) {
+    notes.push(`卓平均 ${formatMetricValue(tableMean, unit)}`);
+  }
+  if (levelMean !== null && levelMean !== undefined && Number.isFinite(levelMean)) {
+    notes.push(`段位平均 ${formatMetricValue(levelMean, unit)}`);
+  }
+  return notes.length > 0 ? notes.join('　') : null;
+}
+
 export interface TopPercent {
   readonly ratio: number; // 0..1。0 に近いほど上位
   readonly text: string; // '上位 21.8%' 等
@@ -161,28 +182,31 @@ export function toTopPercent(percentileValue: number, direction: MetricDirection
 
 /**
  * ヒストグラムの階段状閉多角形 path d 文字列を生成する。
+ * 最頻値のバー上端が y = HISTOGRAM_MARKER_OVERSHOOT となり、
+ * マーカー線がバーより上に突き出る余白を確保する。
  */
 export function buildHistogramPath(h: HistogramData, window: HistogramWindow): string {
   const binCount = window.hi - window.lo + 1;
   if (binCount <= 0) return '';
 
   const w = HISTOGRAM_VIEWBOX_WIDTH;
-  const hPx = HISTOGRAM_VIEWBOX_HEIGHT;
+  const bottomY = HISTOGRAM_TOTAL_HEIGHT;
+  const barHeight = HISTOGRAM_VIEWBOX_HEIGHT;
 
   const points: string[] = [];
   const firstX = 0;
-  points.push(`M ${firstX},${hPx}`);
+  points.push(`M ${firstX},${bottomY}`);
 
   for (let i = window.lo; i <= window.hi; i++) {
     const x0 = (w * (i - window.lo)) / binCount;
     const x1 = (w * (i - window.lo + 1)) / binCount;
     const count = h.bins[i] ?? 0;
-    const y = hPx - (hPx * count) / window.peak;
+    const y = bottomY - (barHeight * count) / window.peak;
     points.push(`L ${x0.toFixed(2)},${y.toFixed(2)}`);
     points.push(`L ${x1.toFixed(2)},${y.toFixed(2)}`);
   }
 
-  points.push(`L ${w},${hPx} Z`);
+  points.push(`L ${w},${bottomY} Z`);
   return points.join(' ');
 }
 
