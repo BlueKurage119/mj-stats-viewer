@@ -288,8 +288,8 @@ describe('statsView', () => {
     expect(row2.valueText).toContain('約40回');
   });
 
-  // A9-9: 全9行の注記文言の検証
-  it('A9-9: 全9行の注記が正しく、和了時は実測値、放銃相手のみダブロンを含む', () => {
+  // A9-9: 2026-09-07 UI調整 表形式化に伴い注記は不要（空文字）で、回数・割合が分離されていること
+  it('A9-9: 和銃分布の各行は表形式用フィールド（countText, percentText, subGroup）を持ち、noteは空文字である', () => {
     const views = buildStatsView({
       stats: baseStats,
       extended: normExtended,
@@ -299,15 +299,24 @@ describe('statsView', () => {
     });
     const distSection = views.find((s) => s.id === 'distribution')!;
 
-    // 和了時3行
+    // 全9行で note は空文字（ツールチップ不要）
+    for (const row of distSection.rows) {
+      expect(row.note).toBe('');
+      expect(row.countText).toBeDefined();
+      expect(row.percentText).toBeDefined();
+    }
+
+    // 和了時3行: 実測値（約なし）、subGroup = 'winState'
     const winKeys = ['winStateRiichi', 'winStateCall', 'winStateDamaten'];
     for (const k of winKeys) {
       const row = distSection.rows.find((r) => r.key === k)!;
-      expect(row.note).toContain('実測値');
-      expect(row.note).not.toContain('ダブロン');
+      expect(row.countText).not.toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(row.subGroup).toBe('winState');
     }
 
-    // 放銃時3行
+    // 放銃時3行: 概算値（約あり）、subGroup = 'dealInState'
     const dealInStateKeys = [
       'dealInStateRiichi',
       'dealInStateCall',
@@ -315,11 +324,13 @@ describe('statsView', () => {
     ];
     for (const k of dealInStateKeys) {
       const row = distSection.rows.find((r) => r.key === k)!;
-      expect(row.note).toContain('放銃率 × 局数');
-      expect(row.note).not.toContain('ダブロン');
+      expect(row.countText).toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(row.subGroup).toBe('dealInState');
     }
 
-    // 放銃相手3行
+    // 放銃相手3行: 概算値（約あり）、subGroup = 'dealInTarget'
     const dealInTargetKeys = [
       'dealInTargetRiichi',
       'dealInTargetCall',
@@ -327,8 +338,31 @@ describe('statsView', () => {
     ];
     for (const k of dealInTargetKeys) {
       const row = distSection.rows.find((r) => r.key === k)!;
-      expect(row.note).toContain('放銃率 × 局数');
-      expect(row.note).toContain('ダブロン');
+      expect(row.countText).toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(row.subGroup).toBe('dealInTarget');
+    }
+  });
+
+  // A6-5: 2026-09-07 UI調整 順位分布の各行は表形式用フィールド（countText, percentText, avgScoreText）を持ち、noteは空文字
+  it('A6-5: 順位分布の各行は表形式用フィールドを持ち、noteは空文字である', () => {
+    const views = buildStatsView({
+      stats: baseStats,
+      extended: normExtended,
+      growth: null,
+      baseMode: 16,
+      numPlayers: 4,
+    });
+    const rankSection = views.find((s) => s.id === 'rank')!;
+    for (const row of rankSection.rows) {
+      expect(row.note).toBe('');
+      expect(row.countText).toBeDefined();
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toBeDefined();
+      expect(row.percentText).toContain('%');
+      expect(row.avgScoreText).toBeDefined();
+      expect(row.avgScoreText).toContain('点');
     }
   });
 

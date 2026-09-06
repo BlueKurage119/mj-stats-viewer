@@ -708,6 +708,13 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 
 ### 5.1 DOM 構造（分母注記はツールチップ・R-8）
 
+> [!NOTE]
+> **2026-09-07 UI調整で上書き**:
+> 1. **カード化**: 各セクションを `ElevatedCard` (`src/components/md`) で包み、9セクション = 9枚のカードが縦に並ぶ構成とする。
+> 2. **表形式化**: `rank`（順位分布）および `distribution`（和銃分布）は `List` ではなく表形式（`table`）で描画する。表内に回数・割合（順位分布は平均点数も）が揃うため、この2セクションのツールチップ（注記）は不要（削除）。
+> 3. **ツールチップのトリガー限定**: リスト形式の残り7セクションにおいて、ラベル全体での hover/focus は廃止し、注記がある行のみラベル横に Material Icon `info`（`src/components/md` の `Icon` コンポーネント）ボタンを配置して、そのアイコンの hover/focus でのみツールチップを表示する。
+> 4. **値の文字サイズ拡大**: リスト行の値および表の回数・割合・平均点数セルを `title-medium`（16px, 500）相当とし、ラベル（`body-medium`）より大きく表示する。
+
 ```tsx
 <div className="stats-panel">
   <p className="stats-panel__count md-typescale-body-small">
@@ -715,35 +722,44 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
   </p>
 
   {sections.map((s) => (
-    <section key={s.id} className="stats-section" data-section={s.id}>
-      <h2 className="stats-section__title md-typescale-title-small">{s.title}</h2>
-      {s.note && <p className="stats-section__note md-typescale-body-small">{s.note}</p>}
-      <List className="stats-section__list">
-        {s.rows.map((r) => (
-          /* ラップは必須。理由は §1.3（md-item の overflow:hidden で吹き出しがクリップされる） */
-          /* r.note === '' の行は吹き出しを作らない（R-14）。hover しても何も出ない体験を避ける */
-          <div className="stats-row" key={r.key} data-row={r.key} data-has-note={r.note ? 'true' : 'false'}>
-            <ListItem>
-              <span
-                slot="headline"
-                className={r.note ? 'stats-row__label stats-row__label--tip' : 'stats-row__label'}
-                {...(r.note ? { tabIndex: 0, 'aria-describedby': `tip-${s.id}-${r.key}` } : {})}
-              >
-                {r.label}
-              </span>
-              <span slot="trailing-supporting-text" className="stats-row__value">
-                {r.valueText}
-              </span>
-            </ListItem>
-            {r.note && (
-              <span className="stats-row__tip" id={`tip-${s.id}-${r.key}`} role="tooltip">
-                {r.note}
-              </span>
-            )}
-          </div>
-        ))}
-      </List>
-    </section>
+    <ElevatedCard key={s.id} className="stats-section-card" data-section={s.id}>
+      <section className="stats-section">
+        <h2 className="stats-section__title md-typescale-title-small">{s.title}</h2>
+        {s.note && <p className="stats-section__note md-typescale-body-small">{s.note}</p>}
+        {/* s.id === 'rank' の場合は順位分布テーブル */}
+        {/* s.id === 'distribution' の場合は和銃分布3小テーブル */}
+        {/* その他セクションは以下の List */}
+        <List className="stats-section__list">
+          {s.rows.map((r) => (
+            <div className="stats-row" key={r.key} data-row={r.key} data-has-note={r.note ? 'true' : 'false'}>
+              <ListItem>
+                <span slot="headline" className="stats-row__headline">
+                  <span className="stats-row__label">{r.label}</span>
+                  {r.note && (
+                    <button
+                      type="button"
+                      className="stats-row__info-btn"
+                      aria-label={`${r.label}の注記`}
+                      aria-describedby={`tip-${s.id}-${r.key}`}
+                    >
+                      <Icon className="stats-row__info-icon">info</Icon>
+                    </button>
+                  )}
+                </span>
+                <span slot="trailing-supporting-text" className="stats-row__value">
+                  {r.valueText}
+                </span>
+              </ListItem>
+              {r.note && (
+                <span className="stats-row__tip" id={`tip-${s.id}-${r.key}`} role="tooltip">
+                  {r.note}
+                </span>
+              )}
+            </div>
+          ))}
+        </List>
+      </section>
+    </ElevatedCard>
   ))}
 </div>
 ```
@@ -768,33 +784,75 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 
 ### 5.2 CSS（`stats.css`）
 
+> [!NOTE]
+> **2026-09-07 UI調整で上書き**:
+> - 各セクションを包むカード `.stats-section-card` に `padding: 16px` を設定。
+> - 表形式セクション（`.stats-table`）のレイアウト・ボーダー・パディングを設定。
+> - 値の文字サイズ: リスト行の値（`.stats-row__value`）および表の数値セル（`.stats-table__cell--value`）を `var(--md-sys-typescale-title-medium-size)`（16px）かつ太字 `500` に拡大し、ラベル（`body-medium`: 14px）より大きく表示。
+> - ツールチップトリガーの限定: ラベルの点線下線・`cursor: help` を撤去し、`.stats-row__info-btn`（Material Icon `info`）を配置。ツールチップは `.stats-row:has(.stats-row__info-btn:hover)` および `.stats-row:has(.stats-row__info-btn:focus-visible)` でのみ表示する。
+
 色は必ず `--md-sys-color-*` を使う。ハードコード禁止（CLAUDE.md §5）。`md-list-item` の既定値の上書きが**必須**（§1.3）:
 
 ```css
+.stats-section-card {
+  display: block;
+}
+
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
 .stats-section__list {
-  /* 1行アイテムに変わったので one-line 側を詰める（既定 56px） */
   --md-list-item-one-line-container-height: 48px;
   --md-list-item-top-space: 4px;
   --md-list-item-bottom-space: 4px;
-  /* 値テキストの既定は label-small(11px) で小さすぎる */
-  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-body-medium-size);
-  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-body-medium-line-height);
+  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-title-medium-size);
+  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-title-medium-line-height);
   --md-list-item-trailing-supporting-text-weight: 500;
   --md-list-item-trailing-supporting-text-color: var(--md-sys-color-on-surface);
 }
 
 .stats-row { position: relative; }
 
-/* 注記が無い行のラベルには点線も cursor:help も付けない（R-14）。
-   点線は「hover すると説明が出る」という約束なので、出ない行に付けると嘘になる */
-.stats-row__label--tip {
-  text-decoration: underline dotted 1px;
-  text-underline-offset: 3px;
-  cursor: help;
+.stats-row__headline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-row__info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: 50%;
   outline-offset: 2px;
 }
 
-.stats-row__value { font-variant-numeric: tabular-nums; }
+.stats-row__info-btn:hover,
+.stats-row__info-btn:focus-visible {
+  color: var(--md-sys-color-primary);
+}
+
+.stats-row__info-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.stats-row__value {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
 
 .stats-row__tip {
   position: absolute;
@@ -808,15 +866,14 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
   color: var(--md-sys-color-inverse-on-surface);
   font-size: var(--md-sys-typescale-body-small-size);
   line-height: var(--md-sys-typescale-body-small-line-height);
-  /* 既定は非表示。display:none にはしない（aria-describedby を殺さないため） */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
 
-.stats-row:hover .stats-row__tip,
-.stats-row:focus-within .stats-row__tip {
+.stats-row:has(.stats-row__info-btn:hover) .stats-row__tip,
+.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip {
   opacity: 1;
   visibility: visible;
 }
@@ -916,6 +973,11 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 **完了条件の文言は「分母注記が各指標に常時表示される」から「分母注記がツールチップ等でアクセス可能である」に変更されている**（要件 §4.3・2026-09-07 オーナー判断）。旧 A2-3（常時表示であること）は**削除**した。
 
 **R-14（2026-09-07 統括担当判断）により、`note` は空文字を許容する。空の行は吹き出し要素を出さない。**以下の条件はその方針に従う。
+
+> [!NOTE]
+> **2026-09-07 UI調整で上書き**:
+> - **トリガーを info アイコンに限定**: A2-4, A2-5, A2-6 のフォーカス/hover 対象はラベル全体ではなく、注記がある行にのみ配置される `.stats-row__info-btn`（Material Icon `info`）に変更。ラベルの点線下線やフォーカス受け取りは廃止。
+> - **表形式2セクションの注記削除**: `rank`（順位分布）および `distribution`（和銃分布）は表形式化により情報がセルに揃うため、注記（ツールチップ）は対象外（`note = ''`）とし、info アイコンおよび吹き出し要素は生成しない。ツールチップが有効なのは残り7セクションのみとなる。
 
 - [ ] **A2-1** 単体テスト: `STAT_SECTIONS` の全行（導出行・成長指標行を含む）の `note` が
   **前後に空白を含まないこと**（`note === note.trim()`）。**空文字は許容する。**
@@ -1072,6 +1134,12 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 
 ### 8.6 順位分布セクション（R-3）
 
+> [!NOTE]
+> **2026-09-07 UI調整で上書き**:
+> - **表形式化**: 順位分布セクションはリスト形式から `| 順位 | 回数 | 割合 | 平均点数 |` の表形式に変更。
+> - **注記の削除**: 回数・割合・平均点数がすべて表のセルに出そろうため、ツールチップ（注記）は不要（削除・A6-5のツールチップ検証は表内セル検証に移行）。
+> - **行数**: 四麻で4行（1位〜4位）、三麻で3行（1位〜3位）の table row となる。
+
 - [ ] **A6-1** `buildRankView` を再利用していること。実行:
   `grep -n "buildRankView" src/stats/statsView.ts` → import と呼び出しがある。
   `grep -rn "avg_rank\|negative_rate\|lastPlaceRate\|averageScore" src/stats/` → **0件**
@@ -1109,6 +1177,12 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
   サマリータブのカード2の「1位 20.4%」とスタッツタブの `[data-row="rank1"]` 行の値が**文字列として一致**すること
 
 ### 8.9 和銃分布セクションの回数・割合併記（R-13）
+
+> [!NOTE]
+> **2026-09-07 UI調整で上書き**:
+> - **3つの小表形式化**: 「和了時の状態」「放銃時の状態」「放銃相手の状態」の3つの小表（各 `| 状態 | 回数 | 割合 |`）に変更。
+> - **回数列と割合列の分離**: 和了時3行は実測回数（約なし）、放銃時/放銃相手6行は概算回数（「約」表記をセル内に維持）。
+> - **注記の削除**: 表内に回数と割合が独立して表示されるため、ツールチップ経由の注記（A9-9）は不要（削除）。
 
 - [ ] **A9-1** 単体テスト: `formatDistributionValue` が §4.3 の5ケース表どおりであること。
   `{count:21, rate:0.362, approximate:false}` → `21回 / 36.2%`、

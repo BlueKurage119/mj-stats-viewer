@@ -99,9 +99,22 @@ describe('StatsSection & DOM structure', () => {
     expect(total3p).toBe(69);
   });
 
-  // A2-2 & A2-6: 注記の有無と DOM 要素・aria-describedby の整合
-  it('A2-2 & A2-6: 注記がある行のみ tip 要素が生成され、aria-describedby と role=tooltip が付与される', () => {
+  // A1-6': 各セクションが ElevatedCard で包まれていること
+  it('A1-6\': 各セクションが ElevatedCard で包まれ、data-section 属性を持つ', () => {
     for (const section of sections4p) {
+      const html = renderToStaticMarkup(<StatsSection section={section} />);
+      expect(html).toContain(`class="stats-section-card"`);
+      expect(html).toContain(`data-section="${section.id}"`);
+    }
+  });
+
+  // A2-2 & A2-6: 注記の有無と DOM 要素・aria-describedby の整合（修正2・修正3対応）
+  it('A2-2 & A2-6: リスト形式セクションでは注記がある行のみ info ボタンと tip 要素が生成され、aria-describedby と role=tooltip が付与される', () => {
+    const listSections = sections4p.filter(
+      (s) => s.id !== 'rank' && s.id !== 'distribution',
+    );
+
+    for (const section of listSections) {
       const html = renderToStaticMarkup(<StatsSection section={section} />);
 
       for (const row of section.rows) {
@@ -115,20 +128,40 @@ describe('StatsSection & DOM structure', () => {
         );
 
         if (hasNote) {
+          // info ボタンが存在し、aria-describedby が付与されている
+          expect(html).toContain('stats-row__info-btn');
+          expect(html).toContain(`aria-describedby="${tipId}"`);
+          expect(html).toContain('stats-row__info-icon');
           // tip 要素が存在し、role="tooltip" と id が付与されている
           expect(html).toContain(`id="${tipId}"`);
           expect(html).toContain(`role="tooltip"`);
-          expect(html).toContain(`aria-describedby="${tipId}"`);
-          expect(html).toContain(`tabindex="0"`);
-          expect(html).toContain('stats-row__label--tip');
           expect(html).toContain(row.note);
         } else {
-          // tip 要素も aria-describedby も tabindex も存在しない
+          // tip 要素も aria-describedby も存在しない
           expect(html).not.toContain(`id="${tipId}"`);
           expect(html).not.toContain(`aria-describedby="${tipId}"`);
         }
       }
     }
+  });
+
+  // 修正2: 順位分布と和銃分布は表形式であり注記（ツールチップ）を持たない
+  it('修正2: 順位分布と和銃分布は表形式で描画され、ツールチップを持たない', () => {
+    const rankSection = sections4p.find((s) => s.id === 'rank')!;
+    const rankHtml = renderToStaticMarkup(<StatsSection section={rankSection} />);
+    expect(rankHtml).toContain('stats-table--rank');
+    expect(rankHtml).toContain('平均点数');
+    expect(rankHtml).not.toContain('stats-row__tip');
+    expect(rankHtml).not.toContain('stats-row__info-btn');
+
+    const distSection = sections4p.find((s) => s.id === 'distribution')!;
+    const distHtml = renderToStaticMarkup(<StatsSection section={distSection} />);
+    expect(distHtml).toContain('stats-table--dist');
+    expect(distHtml).toContain('和了時の状態');
+    expect(distHtml).toContain('放銃時の状態');
+    expect(distHtml).toContain('放銃相手の状態');
+    expect(distHtml).not.toContain('stats-row__tip');
+    expect(distHtml).not.toContain('stats-row__info-btn');
   });
 
   // A2-8: 要件 §8 の明示例
@@ -162,7 +195,7 @@ describe('StatsSection & DOM structure', () => {
   });
 
   // A9-2: 和銃分布セクションの回数表示（和了時3行は約なし、残り6行は約あり）
-  it('A9-2: 和銃分布の9行で実測値（約なし）と概算値（約あり）が区別される', () => {
+  it('A9-2: 和銃分布の表内で実測値（約なし）と概算値（約あり）が区別される', () => {
     const distSection = sections4p.find((s) => s.id === 'distribution')!;
     const html = renderToStaticMarkup(<StatsSection section={distSection} />);
 
@@ -170,10 +203,12 @@ describe('StatsSection & DOM structure', () => {
     const winKeys = ['winStateRiichi', 'winStateCall', 'winStateDamaten'];
     for (const key of winKeys) {
       const row = distSection.rows.find((r) => r.key === key)!;
-      expect(row.valueText).not.toContain('約');
-      expect(row.valueText).toContain('回');
-      expect(row.valueText).toContain('%');
-      expect(html).toContain(row.valueText);
+      expect(row.countText).not.toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(html).toContain(`data-row="${key}"`);
+      expect(html).toContain(row.countText!);
+      expect(html).toContain(row.percentText!);
     }
 
     // 概算6行: dealInStateRiichi, dealInStateCall, dealInStateConcealed, dealInTargetRiichi, dealInTargetCall, dealInTargetDamaten
@@ -187,10 +222,12 @@ describe('StatsSection & DOM structure', () => {
     ];
     for (const key of estKeys) {
       const row = distSection.rows.find((r) => r.key === key)!;
-      expect(row.valueText).toContain('約');
-      expect(row.valueText).toContain('回');
-      expect(row.valueText).toContain('%');
-      expect(html).toContain(row.valueText);
+      expect(row.countText).toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(html).toContain(`data-row="${key}"`);
+      expect(html).toContain(row.countText!);
+      expect(html).toContain(row.percentText!);
     }
   });
 });

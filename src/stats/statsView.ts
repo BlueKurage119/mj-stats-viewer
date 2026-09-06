@@ -13,8 +13,12 @@ import {
 export interface StatRow {
   readonly key: string;
   readonly label: string;
-  readonly note: string; // ツールチップ本文。空文字可（R-14）
+  readonly note: string; // ツールチップ本文。空文字可（R-14）。表形式化された rank / distribution は空文字
   readonly valueText: string; // '36.5%' | '5,312' | '9.87巡' | '3回' | '—'
+  readonly countText?: string;
+  readonly percentText?: string;
+  readonly avgScoreText?: string;
+  readonly subGroup?: 'winState' | 'dealInState' | 'dealInTarget';
 }
 
 export interface StatSectionView {
@@ -98,18 +102,22 @@ export function buildStatsView(input: {
         for (let i = 0; i < sliceCount; i++) {
           const slice = rankView?.slices[i];
           const rankNum = i + 1;
-          const countText = slice ? slice.countText : '0';
+          const countText = slice ? `${slice.countText}回` : '—';
+          const percentText = slice ? `${slice.percentText}%` : '—';
           const avgScore = stats.rank_avg_score?.[i];
           const avgScoreText =
             typeof avgScore === 'number' && Number.isFinite(avgScore)
-              ? Math.round(avgScore).toLocaleString('ja-JP')
-              : '0';
+              ? `${Math.round(avgScore).toLocaleString('ja-JP')}点`
+              : '—';
 
           rows.push({
             key: `rank${rankNum}`,
             label: `${rankNum}位`,
             valueText: slice ? `${slice.percentText}%` : '—',
-            note: `${countText}回・平均 ${avgScoreText}点`,
+            note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
+            countText,
+            percentText,
+            avgScoreText,
           });
         }
         return {
@@ -317,7 +325,6 @@ export function buildStatsView(input: {
           Number.isFinite(winDamaten);
 
         const winTotal = hasAllWinCounts ? winRiichi + winCall + winDamaten : null;
-        const winNote = `和了回数 ${winTotal !== null ? winTotal : '—'} 回のうちの実測値`;
 
         // 放銃時/相手
         const dealInRate = extended?.放铳率;
@@ -331,8 +338,6 @@ export function buildStatsView(input: {
           roundCount > 0;
 
         const dealInCount = canEstimateDealIn ? Math.round(dealInRate * roundCount) : null;
-        const dealInNote = `放銃回数 ${dealInCount !== null ? dealInCount : '—'} 回（放銃率 × 局数）× 各割合。API に回数の生データが無いため丸めた値`;
-        const dealInTargetNote = `放銃回数 ${dealInCount !== null ? dealInCount : '—'} 回（放銃率 × 局数）× 各割合。ダブロン・トリロンのぶん実際の和了者数は放銃回数より数%多いため、やや少なめに出る`;
 
         // 門前率の導出
         const breakdown = extended
@@ -350,6 +355,9 @@ export function buildStatsView(input: {
               dealInCount !== null && dealInConcealedRate !== null
                 ? Math.round(dealInCount * dealInConcealedRate)
                 : null;
+            const countText = count !== null ? `約${count.toLocaleString('ja-JP')}回` : '—';
+            const percentText =
+              dealInConcealedRate !== null ? formatStatValue(dealInConcealedRate, 'rate') : '—';
             return {
               key: r.key,
               label: r.label,
@@ -358,7 +366,10 @@ export function buildStatsView(input: {
                 rate: dealInConcealedRate,
                 approximate: true,
               }),
-              note: dealInNote,
+              note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
+              countText,
+              percentText,
+              subGroup: 'dealInState',
             };
           }
 
@@ -374,6 +385,8 @@ export function buildStatsView(input: {
             const isCountFinite = typeof count === 'number' && Number.isFinite(count);
             const rate =
               isCountFinite && winTotal !== null && winTotal > 0 ? count / winTotal : null;
+            const countText = isCountFinite ? `${count.toLocaleString('ja-JP')}回` : '—';
+            const percentText = rate !== null ? formatStatValue(rate, 'rate') : '—';
             return {
               key: spec.key,
               label: spec.label,
@@ -382,7 +395,10 @@ export function buildStatsView(input: {
                 rate,
                 approximate: false,
               }),
-              note: winNote,
+              note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
+              countText,
+              percentText,
+              subGroup: 'winState',
             };
           }
 
@@ -394,6 +410,8 @@ export function buildStatsView(input: {
               dealInCount !== null && isRateFinite
                 ? Math.round(dealInCount * rawRate)
                 : null;
+            const countText = count !== null ? `約${count.toLocaleString('ja-JP')}回` : '—';
+            const percentText = isRateFinite ? formatStatValue(rawRate, 'rate') : '—';
             return {
               key: spec.key,
               label: spec.label,
@@ -402,7 +420,10 @@ export function buildStatsView(input: {
                 rate: isRateFinite ? rawRate : null,
                 approximate: true,
               }),
-              note: dealInNote,
+              note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
+              countText,
+              percentText,
+              subGroup: 'dealInState',
             };
           }
 
@@ -413,6 +434,8 @@ export function buildStatsView(input: {
             dealInCount !== null && isRateFinite
               ? Math.round(dealInCount * rawRate)
               : null;
+          const countText = count !== null ? `約${count.toLocaleString('ja-JP')}回` : '—';
+          const percentText = isRateFinite ? formatStatValue(rawRate, 'rate') : '—';
           return {
             key: spec.key,
             label: spec.label,
@@ -421,7 +444,10 @@ export function buildStatsView(input: {
               rate: isRateFinite ? rawRate : null,
               approximate: true,
             }),
-            note: dealInTargetNote,
+            note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
+            countText,
+            percentText,
+            subGroup: 'dealInTarget',
           };
         });
 

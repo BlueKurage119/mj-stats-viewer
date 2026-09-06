@@ -1,7 +1,7 @@
 .stats-panel {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .stats-panel__count {
@@ -9,10 +9,15 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+.stats-section-card {
+  display: block;
+}
+
 .stats-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  padding: 16px;
 }
 
 .stats-section__title {
@@ -25,14 +30,95 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* ==========================================================================
+   テーブル形式（順位分布・和銃分布）
+   ========================================================================== */
+
+.stats-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+
+.stats-table__th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  white-space: nowrap;
+}
+
+.stats-table__th--num {
+  text-align: right;
+}
+
+.stats-table__row {
+  border-bottom: 1px solid var(--md-sys-color-surface-container-highest);
+}
+
+.stats-table__row:last-child {
+  border-bottom: none;
+}
+
+.stats-table__cell {
+  padding: 10px 12px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.stats-table__cell--label {
+  text-align: left;
+  font-size: var(--md-sys-typescale-body-medium-size);
+  white-space: nowrap;
+}
+
+.stats-table__cell--num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 修正4: 数値セルを見出しより大きく */
+.stats-table__cell--value {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-dist-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-dist-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-dist-group__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ==========================================================================
+   リスト形式（その他7セクション）
+   ========================================================================== */
+
 .stats-section__list {
   /* 1行アイテムに変わったので one-line 側を詰める（既定 56px） */
   --md-list-item-one-line-container-height: 48px;
   --md-list-item-top-space: 4px;
   --md-list-item-bottom-space: 4px;
-  /* 値テキストの既定は label-small(11px) で小さすぎる */
-  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-body-medium-size);
-  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-body-medium-line-height);
+  /* 修正4: 値テキストをラベルより大きく (body-medium: 14px -> title-medium: 16px, 500) */
+  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-title-medium-size);
+  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-title-medium-line-height);
   --md-list-item-trailing-supporting-text-weight: 500;
   --md-list-item-trailing-supporting-text-color: var(--md-sys-color-on-surface);
 }
@@ -41,20 +127,47 @@
   position: relative;
 }
 
-/* 注記が無い行のラベルには点線も cursor:help も付けない（R-14）。
-   点線は「hover すると説明が出る」という約束なので、出ない行に付けると嘘になる */
+.stats-row__headline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .stats-row__label {
   color: var(--md-sys-color-on-surface);
 }
 
-.stats-row__label--tip {
-  text-decoration: underline dotted 1px;
-  text-underline-offset: 3px;
-  cursor: help;
+/* 修正3: ツールチップトリガー用の info アイコンボタン */
+.stats-row__info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: 50%;
   outline-offset: 2px;
+  vertical-align: middle;
 }
 
+.stats-row__info-btn:hover,
+.stats-row__info-btn:focus-visible {
+  color: var(--md-sys-color-primary);
+}
+
+.stats-row__info-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* 修正4: 値の文字サイズ拡大 */
 .stats-row__value {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -96,8 +209,10 @@
   transition: opacity 120ms ease;
 }
 
-.stats-row:hover .stats-row__tip,
-.stats-row:focus-within .stats-row__tip {
+/* 修正3: info アイコンボタンに hover または focus したときだけ表示 */
+.stats-row:has(.stats-row__info-btn:hover) .stats-row__tip,
+.stats-row:has(.stats-row__info-btn:focus) .stats-row__tip,
+.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip {
   opacity: 1;
   visibility: visible;
 }
