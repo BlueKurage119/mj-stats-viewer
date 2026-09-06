@@ -37,6 +37,10 @@ async function bootstrap() {
         const { WinLoseGallery } = await import('./dev/WinLoseGallery');
         return <WinLoseGallery />;
       },
+      '#/__compare': async () => {
+        const { CompareGallery } = await import('./dev/CompareGallery');
+        return <CompareGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {

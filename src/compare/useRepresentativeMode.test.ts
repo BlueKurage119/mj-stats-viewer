@@ -155,7 +155,10 @@ describe('useRepresentativeMode', () => {
     });
 
     it('fetches player_stats for each candidate when candidate count >= 2', async () => {
-      vi.spyOn(api, 'resolveRange').mockResolvedValue({ start: 0, end: 1000 });
+      vi.spyOn(api, 'resolveRange').mockResolvedValue({
+        start: new Date('2025-01-01'),
+        end: new Date('2025-12-31'),
+      });
       const getPlayerStatsSpy = vi.spyOn(api, 'getPlayerStats').mockImplementation(
         async (_np, _id, _start, _end, modes) =>
           ({
