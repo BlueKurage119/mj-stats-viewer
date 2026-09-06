@@ -749,3 +749,149 @@
     min-width: 0;
   }
 }
+
+/*
+ * 汎用ユーティリティ: 画面上は非表示だがスクリーンリーダーには読ませる。
+ * `display:none` ではなく clip-path 方式にする（フォーカス・読み上げを妨げない標準手口）。
+ * 既存の src/index.css には無いためここで定義する（issue-11 §4.2）。
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * カード4（主要スタッツ）。issue-11 §4。
+ *
+ * R1（loading/ready/error で `.key-stats-card` の高さが完全一致すること）は、
+ * カード2・カード3と同じく「共有 CSS 変数から ready 側・loading 側の両方の高さが決まる」
+ * ことで担保する（実測値の焼き付けはしない。issue-9 で2回壊れている）。
+ * タイル数は状態によらず常に6（ラベルは KEY_STAT_METRICS 由来の固定表なので loading でも
+ * 出せる。skeleton は値・差分の2行だけ。§4.5）。
+ *
+ * 色は文字色のみで表す（背景塗りは使わない。§4.6）。塗り方式にすると `on-*` トークンの
+ * 追加が必要になりテーマ側の変更が増えるため。
+ */
+.key-stats-card {
+  display: block;
+  box-sizing: border-box;
+  --key-stats-value-height: 32px; /* 値行の min-height。skeleton も同じ高さ */
+  --key-stats-delta-height: 20px; /* 差分行の min-height */
+  --key-stats-note-height: 20px; /* 脚注の min-height（loading では文言が空になる） */
+}
+
+.key-stats-card__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+  container-name: key-stats-card;
+}
+
+.key-stats-card__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.key-stats-card__body {
+  position: relative;
+}
+
+/*
+ * error: タイル枠と同じ構造を（見えない状態で）描いて場所を確保した上で、
+ * このメッセージを重ねて表示する（カード2・カード3と同じ手口）。
+ */
+.key-stats-card__body--message > .key-stats-card__tiles {
+  visibility: hidden;
+}
+
+.key-stats-card__message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--md-sys-color-error);
+  margin: 0;
+  padding: 0 8px;
+}
+
+/*
+ * 既定（狭い側）は 2 列（モバイル 2×3）。600px 以上は下の
+ * `@container key-stats-card (min-width: 600px)` が 3 列（3×2）に上書きする。
+ * auto-fit は使わない。Issue が列数（3×2 / 2×3）を指定しているため repeat(2|3, ...) で固定する。
+ */
+.key-stats-card__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.key-stats-card__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* R1 の生命線: ready 側・loading 側とも同じ変数から行の高さが決まる */
+.key-stats-card__value {
+  min-height: var(--key-stats-value-height);
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+}
+
+.key-stats-card__delta {
+  min-height: var(--key-stats-delta-height);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.key-stats-card__delta-glyph {
+  font-size: 0.85em;
+}
+
+/* 色は tone の3値のみで決まる。ここ以外に色を書かない（§4.6・完了条件17） */
+.key-stats-card__delta[data-tone='neutral'] {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.key-stats-card__delta[data-tone='bad'] {
+  color: var(--md-sys-color-error);
+}
+.key-stats-card__delta[data-tone='good'] {
+  color: var(--md-custom-color-delta-good);
+}
+
+.key-stats-card__skeleton {
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+/* R1 の生命線その2: loading では中身が空になるが、高さはこの変数から決まる */
+.key-stats-card__note {
+  min-height: var(--key-stats-note-height);
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/*
+ * 【配置上の注意】このブロックは `.key-stats-card__*` の基本ルールより**後ろ**に置くこと。
+ * 詳細度が同じ（単一クラス）なので、基本ルールが後ろにあると後勝ちで打ち消される（issue-9 で実際に起きた）。
+ */
+@container key-stats-card (min-width: 600px) {
+  .key-stats-card__tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

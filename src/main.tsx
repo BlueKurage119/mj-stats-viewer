@@ -29,6 +29,10 @@ async function bootstrap() {
         const { PlaystyleGallery } = await import('./dev/PlaystyleGallery');
         return <PlaystyleGallery />;
       },
+      '#/__keystats': async () => {
+        const { KeyStatsGallery } = await import('./dev/KeyStatsGallery');
+        return <KeyStatsGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {

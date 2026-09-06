@@ -5,6 +5,7 @@ import { ElevatedCard } from '../components/md';
 import { LevelDetailCard } from './LevelDetailCard';
 import { RankCard } from './RankCard';
 import { PlaystyleCard } from './PlaystyleCard';
+import { KeyStatsCard } from './KeyStatsCard';
 import './summary.css';
 
 /**
@@ -35,6 +36,12 @@ export function SummaryPanel(): ReactElement {
           </ElevatedCard>
           <RankCard state={scope.stats} numPlayers={scope.numPlayers} />
           <PlaystyleCard
+            state={scope.stats}
+            distribution={scope.distribution}
+            modes={scope.filter?.modes ?? null}
+            numPlayers={scope.numPlayers}
+          />
+          <KeyStatsCard
             state={scope.stats}
             distribution={scope.distribution}
             modes={scope.filter?.modes ?? null}
