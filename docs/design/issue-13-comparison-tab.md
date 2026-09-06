@@ -618,7 +618,7 @@ dev ギャラリー `#/__compare`（`src/dev/CompareGallery.tsx`）に最低限�
 - [ ] **A6-2b** 魂天の畳み込み。`selfLevelId: 10701` → `selfBucketId === 10799`、`bars` の `10799` が `isSelf === true`、
   `topPercent.ratio === 0` → 表示 **`上位 0.1%未満`**（自分の帯は上位に数えないため。畳み込みを忘れると
   `levelDistributionPosition` が `10799` を「自分より上」に数えて `上位 0.2%` になってしまう）
-- [ ] **A6-3** ラベル。`levelBucketLabel(10799) === '魂天'`（**`'魂天99'` ではない**）。`levelBucketLabel(10501) === '雀豪1'`
+- [ ] **A6-3** ラベル。`levelBucketLabel(10799) === '魂天'`（**`'魂天99'` ではない**）。`levelBucketLabel(10501) === '雀聖1'`（雀豪1なら `levelBucketLabel(10401) === '雀豪1'`）
 - [ ] **A6-4** `selfLevelId: null` で `topPercent === null`・全 `isSelf === false`・分布は描かれる
 - [ ] **A6-5** **red 確認**: `levelStatBucketId` を恒等関数に書き換えると A6-2b が落ちる（`上位 0.1%未満` → `上位 0.2%`）。確認後に戻す
 

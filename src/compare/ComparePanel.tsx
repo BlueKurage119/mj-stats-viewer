@@ -15,7 +15,7 @@ import { HistogramCard } from './HistogramCard';
 import { getLevelBandMean, populationSize } from './histogramView';
 import { LevelDistributionCard } from './LevelDistributionCard';
 import { buildLevelDistributionView } from './levelDistributionView';
-import { useRepresentativeMode } from './useRepresentativeMode';
+import { shouldResetOverride, useRepresentativeMode } from './useRepresentativeMode';
 import './compare.css';
 
 /**
@@ -34,7 +34,7 @@ export function ComparePanel(): ReactElement {
   // filter が変化したら override をリセット（A4-4）
   const prevFilterRef = useRef<GlobalFilter | null>(filter);
   useEffect(() => {
-    if (filter !== prevFilterRef.current) {
+    if (shouldResetOverride(prevFilterRef.current, filter)) {
       prevFilterRef.current = filter;
       setOverrideMode(null);
     }

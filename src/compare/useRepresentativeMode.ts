@@ -59,6 +59,21 @@ export function determineRepresentativeMode(
   return { mode, auto: true };
 }
 
+/**
+ * フィルタの変更に伴ってユーザー指定の overrideMode をリセットすべきかを判定する純関数（A4-4）。
+ * 期間（period）または選択モード（modes）が変わった場合に true を返す。
+ */
+export function shouldResetOverride(
+  prevFilter: GlobalFilter | null,
+  nextFilter: GlobalFilter | null,
+): boolean {
+  if (prevFilter === nextFilter) return false;
+  if (!prevFilter || !nextFilter) return true;
+  if (prevFilter.period !== nextFilter.period) return true;
+  if (prevFilter.modes.length !== nextFilter.modes.length) return true;
+  return prevFilter.modes.some((m, i) => m !== nextFilter.modes[i]);
+}
+
 export function useRepresentativeMode(args: {
   numPlayers: NumPlayers;
   playerId: number;

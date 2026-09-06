@@ -5,6 +5,7 @@ import * as api from '../api';
 import {
   determineRepresentativeMode,
   resolveCandidates,
+  shouldResetOverride,
   useRepresentativeMode,
 } from './useRepresentativeMode';
 import type { GlobalFilter } from '../filters/filterState';
@@ -107,6 +108,41 @@ describe('useRepresentativeMode', () => {
       const counts = { 16: 10, 12: 99 };
       const res = determineRepresentativeMode(4, candidates, counts, 9 as GameMode);
       expect(res).toEqual({ mode: 12, auto: true });
+    });
+
+    // A4-4: filter の変更で override がリセットされること
+    describe('shouldResetOverride (A4-4)', () => {
+      it('returns false when filters are identical or have same values', () => {
+        const f1: GlobalFilter = { modes: [16, 12], period: 'all' };
+        const f2: GlobalFilter = { modes: [16, 12], period: 'all' };
+        expect(shouldResetOverride(f1, f1)).toBe(false);
+        expect(shouldResetOverride(f1, f2)).toBe(false);
+      });
+
+      it('returns true when period changes', () => {
+        const f1: GlobalFilter = { modes: [16, 12], period: 'all' };
+        const f2: GlobalFilter = { modes: [16, 12], period: '30d' };
+        expect(shouldResetOverride(f1, f2)).toBe(true);
+      });
+
+      it('returns true when modes change', () => {
+        const f1: GlobalFilter = { modes: [16], period: 'all' };
+        const f2: GlobalFilter = { modes: [16, 12], period: 'all' };
+        expect(shouldResetOverride(f1, f2)).toBe(true);
+
+        const f3: GlobalFilter = { modes: [12, 16], period: 'all' };
+        expect(shouldResetOverride(f2, f3)).toBe(true);
+      });
+
+      it('returns true when transitions between null and non-null', () => {
+        const f: GlobalFilter = { modes: [16], period: 'all' };
+        expect(shouldResetOverride(null, f)).toBe(true);
+        expect(shouldResetOverride(f, null)).toBe(true);
+      });
+
+      it('returns false when both are null', () => {
+        expect(shouldResetOverride(null, null)).toBe(false);
+      });
     });
   });
 
