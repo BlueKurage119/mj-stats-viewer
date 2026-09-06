@@ -149,7 +149,7 @@ export function WinLoseGallery(): ReactElement {
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h2 className="md-typescale-title-medium">
-          段位シード（受け入れ条件29: 5種で hand-* トークンが変化しないこと）
+          段位シード（5種でドーナツの配色が primary/tertiary/secondary に追従すること）
         </h2>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {RANK_OPTIONS.map((opt) => (

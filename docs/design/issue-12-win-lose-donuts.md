@@ -7,6 +7,18 @@
 
 ---
 
+### 改訂注記（2026-09-06）
+
+オーナー判断により配色を system role color(primary/tertiary/secondary)に変更(2026-09-06):
+- 立直: `--md-sys-color-primary`
+- 副露: `--md-sys-color-tertiary`
+- 闇聴・門前: `--md-sys-color-secondary`
+独自カスタムトークン系統（`hand-*`）および関連型・定数は廃止・削除された。
+また、表示ラベルを「闇聴」にアプリ全体で統一した（APIキー等内部識別子を除く）。
+過去の設計判断・検討記録自体は当時の経緯の記録として本文に残している。
+
+---
+
 ## §0 統括担当への確認事項（着手前に判断が要るもの）
 
 ### R-1 凡例に「回数」を出すか（推奨: **出さない。% のみ**）
@@ -117,14 +129,14 @@ CSS は 22.15 kB のまま変化なし。計測後に両ファイルを `git che
 
 | # | タイトル | 区分1 | 区分2 | 区分3 | 元データ |
 |---|---|---|---|---|---|
-| 1 | 和了時の状態 | 立直 | 副露 | 黙聴 | `立直和了` / `副露和了` / `默听和了`（回数） |
+| 1 | 和了時の状態 | 立直 | 副露 | 闇聴 | `立直和了` / `副露和了` / `默听和了`（回数） |
 | 2 | 放銃時の状態 | 立直 | 副露 | **門前** | `放铳时立直率` / `放铳时副露率` / 残り（率） |
-| 3 | 放銃相手の状態 | 立直 | 副露 | 黙聴 | `放铳至立直` / `放铳至副露` / `放铳至默听`（率） |
+| 3 | 放銃相手の状態 | 立直 | 副露 | 闇聴 | `放铳至立直` / `放铳至副露` / `放铳至默听`（率） |
 
 3枚とも「立直 / 副露 / それ以外（門前系）」という**同じ軸**である。したがって:
 
 - **色は3枚で共通**（区分1=立直色・区分2=副露色・区分3=門前色）。カードを横断して「紫＝立直」が一貫する。
-- ドーナツ2の第3区分だけラベルが **`門前`**。理由: `放铳时*` は放銃した局面の自分の状態であり、聴牌しているとは限らないので「黙聴（＝門前聴牌でダマ）」と言い切れない。**ラベルを嘘にしない。**
+- ドーナツ2の第3区分だけラベルが **`門前`**。理由: `放铳时*` は放銃した局面の自分の状態であり、聴牌しているとは限らないので「闇聴（＝門前聴牌でダマ）」と言い切れない。**ラベルを嘘にしない。**
 
 ### 2.2 描画は #9 の `Donut` を再利用する。`recharts` は検討しない
 
@@ -203,7 +215,7 @@ src/main.tsx                   dev ルート追加（既存の literal 分岐 + 
 **変更（最小限）**
 
 1. `type Breakdown` を `export type Breakdown` にする（ビューモデルが戻り値の型を名指しするため）。
-2. `winBreakdown` の docstring `/** 和了の相手内訳 */` は誤り（相手ではなく**自分の和了時の状態**）。`/** 和了時の自分の状態内訳（立直/副露/黙聴） */` に直す。
+2. `winBreakdown` の docstring `/** 和了の相手内訳 */` は誤り（相手ではなく**自分の和了時の状態**）。`/** 和了時の自分の状態内訳（立直/副露/闇聴） */` に直す。
 3. `dealInBreakdown` の docstring に「**入力は回数ではなく率（合計 1）で来る。合計で割るので率でも回数でも正しい構成比になる**」を追記する（§1.1 の実測を関数の脇に残す）。
 
 **追加（1本だけ）**
@@ -269,11 +281,11 @@ export function percentTenths(rates: readonly number[]): readonly number[];
 
 ```ts
 export type DonutKey = 'winState' | 'dealInState' | 'dealInTarget';
-export type HandColorKey = 'hand-riichi' | 'hand-furo' | 'hand-menzen'; // theme/seeds から import
+export type SliceColorRole = 'primary' | 'tertiary' | 'secondary'; // システムロール色（改訂注記参照）
 
 export interface WinLoseSlice {
-  readonly key: HandColorKey;      // React key 兼 色トークン名
-  readonly label: string;          // '立直' | '副露' | '黙聴' | '門前'
+  readonly key: SliceColorRole;    // React key 兼 システムロール名
+  readonly label: string;          // '立直' | '副露' | '闇聴' | '門前'
   readonly rate: number;           // 0..1（丸め前）
   readonly percentText: string;    // '36.2'（% 記号なし。3枚合計は常に '100.0' 相当）
   readonly arcLength: number | null;
@@ -299,11 +311,11 @@ export function buildWinLoseView(extended: PlayerExtendedStats): WinLoseView;
 
 | DonutKey | title | slice1 | slice2 | slice3 | 元の Breakdown |
 |---|---|---|---|---|---|
-| `winState` | 和了時の状態 | 立直 | 副露 | 黙聴 | `winBreakdown(extended)` |
+| `winState` | 和了時の状態 | 立直 | 副露 | 闇聴 | `winBreakdown(extended)` |
 | `dealInState` | 放銃時の状態 | 立直 | 副露 | **門前** | `dealInStateBreakdown(extended)` |
-| `dealInTarget` | 放銃相手の状態 | 立直 | 副露 | 黙聴 | `dealInBreakdown(extended)` |
+| `dealInTarget` | 放銃相手の状態 | 立直 | 副露 | 闇聴 | `dealInBreakdown(extended)` |
 
-- slice の `key` は3枚とも `hand-riichi` / `hand-furo` / `hand-menzen` の順で固定。
+- slice の `key` は3枚とも `primary` / `tertiary` / `secondary` の順で固定。
 - `Number.isFinite` ガード: `winBreakdown` / `dealInBreakdown` に渡す前に3値が全て有限数か検査し、そうでなければそのドーナツを `slices: null` にする（§4.1 の `?? 0` が効かなかった場合の二重の守り。`dealInStateBreakdown` は関数内で同じ検査をする）。
 - `ariaLabel`: `` `${title} ${slices.map(s => `${s.label} ${s.percentText}%`).join(' ')}` ``。
 
@@ -332,7 +344,7 @@ DOM 構造:
           <h3 class="win-lose-card__item-title md-typescale-label-large">和了時の状態</h3>
           <Donut … testId="win-lose-donut-winState" placeholder={slices===null} />
           <ul class="win-lose-card__legend">  ← 常に3行（loading/空はスケルトン or ダッシュ）
-            <li><span class="win-lose-card__swatch" style="--swatch: var(--md-custom-color-hand-riichi)"/>
+            <li><span class="win-lose-card__swatch" style="--swatch: var(--md-sys-color-primary)"/>
                 <span …>立直</span><span class="numeric">36.2%</span></li>
             …
           </ul>
@@ -392,40 +404,29 @@ DOM 構造:
 
 ---
 
-## §5 テーマトークンの追加（§0 R-2 の対象）
+## §5 テーマトークンの追加（旧案・検討記録。2026-09-06改訂によりシステムロール色へ変更）
 
-### 5.1 `src/theme/seeds.ts`
+> ※ 2026-09-06 改訂注記: オーナー判断により、和銃分布ドーナツの配色は MD3 システムロール色（primary/tertiary/secondary）に変更され、独自カスタムトークン系統は廃止された。以下は当初の検討・実測の記録として残す。
+
+### 5.1 当初検討時のトークン案
 
 ```ts
-/** 和銃分布ドーナツの区分色（立直/副露/門前）。3枚のドーナツで共通。issue-12 §2.3 */
-export type HandColorKey = 'hand-riichi' | 'hand-furo' | 'hand-menzen';
-
-export const HAND_COLOR_SOURCES: Record<HandColorKey, string> = {
-  'hand-riichi': '#9C5BD1', // 立直: パープル（SECTION_COLORS.riichi と同値。ただし customColor 経由ではない）
-  'hand-furo': '#00897B',   // 副露: ティール
-  'hand-menzen': '#78909C', // 門前・黙聴: スレート（残余カテゴリなので最も低彩度）
-};
-
-/**
- * 区分ごとに違うトーンを当てる。MD3 の customColor ロール（light 40 / dark 80 固定）だと
- * 3色の輝度が揃い、隣接コントラストが 1.00 になってグレースケールで区別できなくなる
- * （issue-9 §1.2 実測）。順位色と同じ手口。
- */
-export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, number>> = {
-  light: { 'hand-riichi': 48, 'hand-furo': 40, 'hand-menzen': 56 },
-  dark: { 'hand-riichi': 78, 'hand-furo': 70, 'hand-menzen': 88 },
-};
+/** 和銃分布ドーナツの区分色（立直/副露/門前）。（旧案） */
+// 立直: '#9C5BD1' // パープル
+// 副露: '#00897B' // ティール
+// 門前・闇聴: '#78909C' // スレート（残余カテゴリなので最も低彩度）
+// トーン: light { 立直: 48, 副露: 40, 門前: 56 }, dark { 立直: 78, 副露: 70, 門前: 88 }
 ```
 
-### 5.2 `src/theme/applyTheme.ts`
+### 5.2 `src/theme/applyTheme.ts`（当初案）
 
 順位色の書き出しの直後、`--md-custom-color-delta-good` の直前に、順位色と同じ手口で3本追加する（`TonalPalette.fromInt` はモジュールスコープで一度だけ作る）。**段位シードから独立**なので `themeFromSourceColor` は通さない。
 
-### 5.3 実測値（`node` で `@material/material-color-utilities@0.3.0` を直接叩いて計測。5シード × light/dark）
+### 5.3 実測値（当初案における計測値。`node` で `@material/material-color-utilities@0.3.0` を直接叩いて計測。5シード × light/dark）
 
 背景 = `ElevatedCard` の地色（`surface-container-low` = neutral tone 96 / 10）。
 
-| モード | hand-riichi | hand-furo | hand-menzen | 背景コントラスト | 相互コントラスト |
+| モード | 立直区分 (旧案) | 副露区分 (旧案) | 門前区分 (旧案) | 背景コントラスト | 相互コントラスト |
 |---|---|---|---|---|---|
 | light | `#9453c9` | `#006b5f` | `#728a96` | **4.36–4.39 / 5.80–5.83 / 3.27–3.29** | 立直/副露 1.33・立直/門前 1.33・副露/門前 1.77 |
 | dark | `#ddafff` | `#52bcac` | `#c8e1ee` | **9.48–9.54 / 7.44–7.49 / 12.58–12.66** | 立直/副露 1.27・立直/門前 1.33・副露/門前 1.69 |
@@ -433,10 +434,10 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 判明した事実:
 
 - **全3色・両モードで背景コントラスト 3:1 以上**（WCAG 1.4.11 非テキストコントラストを満たす）。5シード間の振れ幅は ±0.03 以内で、実質シード非依存。
-- `hand-menzen` の light トーンは **56 が下限**。58 で 3.06、60 で **2.87** と 3:1 を割る（実測: tone 50→4.02 / 52→3.75 / 54→3.50 / 56→3.27 / 58→3.06 / 60→2.87）。「門前は淡く」を優先して 60 にすると基準を割るため、**56 が上限側の限界値**である。
-- **色相の化けは起きない**（`hand-menzen` は彩度 17.4 の低彩度だが色相 227.6→226.6/227.4 を保持）。issue-9 の customColor 経路で起きた「低彩度が高彩度色相に化ける」現象は `TonalPalette` 直叩きでは起きない。
+- 旧案の門前区分の light トーンは **56 が下限**。58 で 3.06、60 で **2.87** と 3:1 を割る（実測: tone 50→4.02 / 52→3.75 / 54→3.50 / 56→3.27 / 58→3.06 / 60→2.87）。「門前は淡く」を優先して 60 にすると基準を割るため、**56 が上限側の限界値**である。
+- **色相の化けは起きない**（門前区分は彩度 17.4 の低彩度だが色相 227.6→226.6/227.4 を保持）。issue-9 の customColor 経路で起きた「低彩度が高彩度色相に化ける」現象は `TonalPalette` 直叩きでは起きない。
 - **相互コントラストの最小は 1.27**（順位色の 1.22 と同水準）。したがって**カード2と同様、スライス間の隙間（`DONUT_GAP = 4`）は必須**であり、**色を唯一の伝達手段にしない**（凡例に `立直 36.2%` とテキストで書く）。
-- カード2の `rank-2`（銀・light `#50585f`）と `hand-menzen`（light `#728a96`）は同系のスレートだが、明度が離れている（コントラスト比 1.9）うえ別カード・別凡例なので混同のリスクは低い。**UI 検証で最終確認する**（§7）。
+- カード2の `rank-2`（銀・light `#50585f`）と旧案門前色（light `#728a96`）は同系のスレートだが、明度が離れている（コントラスト比 1.9）うえ別カード・別凡例なので混同のリスクは低い。**UI 検証で最終確認する**（§7）。
 
 ---
 
@@ -462,12 +463,12 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 10. 実レスポンス相当の入力（`立直和了:21, 副露和了:29, 默听和了:8`）で `winState` の `percentText` が `['36.2','50.0','13.8']` になり、**3値の和が正確に `100.0`** であること（`percentText` を数値化して合計する形で検証する）。
 11. 端数が割れる入力（`立直和了:1, 副露和了:1, 默听和了:1`）で `percentText` が `['33.4','33.3','33.3']`（合計ちょうど `100.0`）になること。`['33.3','33.3','33.3']`（合計 99.9）なら不合格＝最大剰余法と同値端数の配分規則（§4.3-a）が効いていない。
 12. `dealInState` の入力 `放铳率:0.1237, 放铳时立直率:0.1538, 放铳时副露率:0.4615` で3スライスが `['15.4','46.1','38.5']`（合計 100.0）になり、3スライス目の `label` が **`門前`** であること。
-13. `dealInTarget` の入力 `放铳至立直:0.1875, 放铳至副露:0.5, 放铳至默听:0.3125` で `['18.8','50.0','31.2']`（合計 100.0）になり、3スライス目の `label` が **`黙聴`** であること。
-14. 3枚とも slice の `key` が `['hand-riichi','hand-furo','hand-menzen']` の順で一致すること（色の一貫性）。
+13. `dealInTarget` の入力 `放铳至立直:0.1875, 放铳至副露:0.5, 放铳至默听:0.3125` で `['18.8','50.0','31.2']`（合計 100.0）になり、3スライス目の `label` が **`闇聴`** であること。
+14. 3枚とも slice の `key` が `['primary','tertiary','secondary']` の順で一致すること（色の一貫性）。
 15. `和了 0`（`立直和了:0, 副露和了:0, 默听和了:0`）のとき `winState.slices === null` かつ**他の2枚は `null` でない**こと。
 16. `放铳率:0` のとき `dealInState.slices === null` かつ `dealInTarget.slices === null`（`放铳至*` も 0 のため）で、`winState` は描かれること。
 17. `立直和了` に `undefined` を混ぜた入力（`as unknown as PlayerExtendedStats`）で `winState.slices === null` になること（`NaN` の弧が出ないこと）。
-18. `ariaLabel` が `和了時の状態 立直 36.2% 副露 50.0% 黙聴 13.8%` の形であること。
+18. `ariaLabel` が `和了時の状態 立直 36.2% 副露 50.0% 闇聴 13.8%` の形であること。
 
 ### 共有部品の回帰
 
@@ -479,16 +480,16 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 
 22. `npm run dev` で `#/__winlose` を開くと、`和銃分布` カードにドーナツが**3枚**表示され、各ドーナツの上にタイトル `和了時の状態` / `放銃時の状態` / `放銃相手の状態` が出ること。
 23. `document.querySelectorAll('[data-testid^="win-lose-donut-"]').length === 3` であること。
-24. 各ドーナツの `circle.donut__seg` が**3本**（0% の区分がある場合はその本数だけ減る）描かれ、`stroke` が `--md-custom-color-hand-riichi` / `-furo` / `-menzen` の順で当たっていること（DevTools の computed style で確認）。
+24. 各ドーナツの `circle.donut__seg` が**3本**（0% の区分がある場合はその本数だけ減る）描かれ、`stroke` が `--md-sys-color-primary` / `tertiary` / `secondary` の順で当たっていること（DevTools の computed style で確認）。
 25. 凡例の % を3枚それぞれ合計すると **100.0** になること（画面の表示値を読んで検算する）。
 26. ギャラリーの状態切替で `loading` / `error` / `extended=null` / 「和了0」/「放銃0」の各状態を選び、**カードの高さが `ready` と一致**すること（`getBoundingClientRect().height` を比較し、差が 1px 以内）。
 27. ブラウザ幅を変えてカード幅が 600px を跨ぐとき、**3枚縦積み（ドーナツ左・凡例右）↔ 横3列**が切り替わること。両方の幅で横スクロールが出ないこと。
 
-### テーマ（完了条件3）
+### テーマ（システムロール色対応）
 
-28. ギャラリーの light / dark 切替で、3色のスウォッチとドーナツの弧の色が**両方とも変わる**こと（`getComputedStyle(document.documentElement).getPropertyValue('--md-custom-color-hand-riichi')` が light `#9453c9` / dark `#ddafff` を返す）。
-29. 段位シードを5種（既定・雀傑・雀豪・雀聖・魂天）に切り替えても、`--md-custom-color-hand-*` の3値が**変化しない**こと（段位シードから独立している証明）。
-30. dark で `--md-custom-color-hand-menzen` が `#c8e1ee` であり、カードの地色に対して視認できること（目視）。
+28. ギャラリーの light / dark 切替で、3色のスウォッチとドーナツの弧の色が**両方とも変わる**こと（システムロール色が light / dark に連動して切り替わる）。
+29. 段位シードを5種（既定・雀傑・雀豪・雀聖・魂天）に切り替えると、各段位シードに応じた primary / tertiary / secondary がドーナツに反映されること。
+30. dark で `--md-sys-color-secondary` がカードの地色に対して視認できること（目視）。
 
 ### アクセシビリティ
 
@@ -507,7 +508,7 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 
 エージェントが原理的に判断できないものを1件だけ挙げる。製造・検収では判定しない。
 
-- **V-?: 3区分色（紫・ティール・スレート）の見た目**。特に (1) light の `hand-menzen` `#728a96` がカード2の `rank-2`（銀 `#50585f`）と混同されないか、(2) dark の `hand-riichi` `#ddafff` が段位シード（雀聖=赤 / 魂天=青）の primary と喧嘩しないか、(3) 3枚のドーナツで同じ色が同じ意味に読めるか。手順書は検収フェーズで作成した: [docs/ui-verification/2026-09-06-issue-12-win-lose-donuts.md](../ui-verification/2026-09-06-issue-12-win-lose-donuts.md)。
+- **V-?: 3区分色の見た目**。特に (1) 各シードで primary / tertiary / secondary が見分けられるか、(2) 雀聖等の赤系シードでも破綻しないか、(3) 3枚のドーナツで同じ色が同じ意味に読めるか。手順書は検収フェーズで作成した: [docs/ui-verification/2026-09-06-issue-12-win-lose-donuts.md](../ui-verification/2026-09-06-issue-12-win-lose-donuts.md)。
 
 ---
 
@@ -525,7 +526,7 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 ## §9 後続 Issue への引き継ぎ
 
 - **`src/summary/donutShared.ts` が今後のドーナツの共有基盤になる。** 弧計算・パーセント配分をここに集約したので、比較タブ等で新しいドーナツを作るときは `toDonutArcs` / `percentTenths` を使う。カード2の `rankCounts`（回数の最大剰余配分）は `rankView.ts` に残す（回数表示はカード2固有）。
-- **`--md-custom-color-hand-*` は「立直 / 副露 / 門前」という意味の色である。** スタッツタブの「和銃分布」章（requirements §4.3）でも同じ意味で使えば画面全体の一貫性が取れる。**別の意味に流用しないこと**（issue-11 §5.3 案 b を却下したのと同じ理由）。
+- **和銃分布の配色は MD3 システムロール色（立直: primary / 副露: tertiary / 闇聴・門前: secondary）である。** スタッツタブの「和銃分布」章（requirements §4.3）でも同じシステムロール色を使えば画面全体の一貫性が取れる。
 - **`?? 0` 補完の対象キーは api 層で管理する。** 新しい回数系キーを画面で使う Issue は、まず `normalize.ts` の補完リストを確認すること。
 - **母数（和了回数・放銃回数）の表示は本カードでは意図的に見送っている**（§1.4）。スタッツタブ（#14）で扱う際は、まず `和牌率` の分母を特定すること。
 - **セクション色4系統（`--md-custom-color-{win,dealin,riichi,luck}`）は本カードでは使っていない。** CLAUDE.md「保留中の設計判断」どおり、廃止されても本カードは影響を受けない。

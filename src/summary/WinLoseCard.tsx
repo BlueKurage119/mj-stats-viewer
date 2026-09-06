@@ -21,7 +21,7 @@ function Skeleton({ ariaHidden }: { ariaHidden?: boolean }): ReactElement {
 function segmentsFromSlices(slices: readonly WinLoseSlice[]): readonly DonutSegment[] {
   return slices.map((slice) => ({
     key: slice.key,
-    colorVar: `var(--md-custom-color-${slice.key})`,
+    colorVar: `var(--md-sys-color-${slice.key})`,
     arcLength: slice.arcLength,
     arcOffset: slice.arcOffset,
   }));
@@ -47,7 +47,7 @@ function LegendItem({ slice, label }: { slice: WinLoseSlice | null; label: strin
       <span
         className={`win-lose-card__swatch${slice === null ? ' win-lose-card__swatch--empty' : ''}`}
         aria-hidden="true"
-        style={slice !== null ? ({ '--swatch': `var(--md-custom-color-${slice.key})` } as CSSProperties) : undefined}
+        style={slice !== null ? ({ '--swatch': `var(--md-sys-color-${slice.key})` } as CSSProperties) : undefined}
       />
       <span className="win-lose-card__legend-text">
         <span className="win-lose-card__legend-label">{slice?.label ?? label}</span>

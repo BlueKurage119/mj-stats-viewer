@@ -100,7 +100,7 @@ describe('winLoseView: buildWinLoseView', () => {
     expect(dealInState.slices![2].label).toBe('門前');
   });
 
-  it('U5: dealInTarget が放铳至*から算出され、3スライス目のラベルが「黙聴」', () => {
+  it('U5: dealInTarget が放铳至*から算出され、3スライス目のラベルが「闇聴」', () => {
     const view = buildWinLoseView(
       makeExtended({ 放铳至立直: 0.1875, 放铳至副露: 0.5, 放铳至默听: 0.3125 }),
     );
@@ -108,10 +108,10 @@ describe('winLoseView: buildWinLoseView', () => {
     expect(dealInTarget.slices).not.toBeNull();
     const texts = dealInTarget.slices!.map((s) => s.percentText);
     expect(texts).toEqual(['18.8', '50.0', '31.2']);
-    expect(dealInTarget.slices![2].label).toBe('黙聴');
+    expect(dealInTarget.slices![2].label).toBe('闇聴');
   });
 
-  it('U6: 3枚とも slice の key が hand-riichi/hand-furo/hand-menzen の順で一致する', () => {
+  it('U6: 3枚とも slice の key が primary/tertiary/secondary の順で一致する', () => {
     const view = buildWinLoseView(
       makeExtended({
         放铳率: 0.1237,
@@ -123,7 +123,7 @@ describe('winLoseView: buildWinLoseView', () => {
       }),
     );
     for (const donut of view.donuts) {
-      expect(donut.slices!.map((s) => s.key)).toEqual(['hand-riichi', 'hand-furo', 'hand-menzen']);
+      expect(donut.slices!.map((s) => s.key)).toEqual(['primary', 'tertiary', 'secondary']);
     }
   });
 
@@ -178,7 +178,7 @@ describe('winLoseView: buildWinLoseView', () => {
   it('U10: ariaLabelが「タイトル ラベル %値% …」の形になる', () => {
     const view = buildWinLoseView(makeExtended());
     const winState = view.donuts.find((d) => d.key === 'winState')!;
-    expect(winState.ariaLabel).toBe('和了時の状態 立直 36.2% 副露 50.0% 黙聴 13.8%');
+    expect(winState.ariaLabel).toBe('和了時の状態 立直 36.2% 副露 50.0% 闇聴 13.8%');
   });
 
   it('slices が null のときの ariaLabel は「タイトル データなし」', () => {

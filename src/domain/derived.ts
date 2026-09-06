@@ -41,7 +41,7 @@ function breakdown(riichi: number, furo: number, moten: number): Breakdown | nul
   return { 立直: riichi / total, 副露: furo / total, 默听: moten / total };
 }
 
-/** 和了時の自分の状態内訳（立直/副露/黙聴）。合計 0 のときは null */
+/** 和了時の自分の状態内訳（立直/副露/闇聴）。合計 0 のときは null */
 export function winBreakdown(s: Pick<PlayerExtendedStats, '立直和了' | '副露和了' | '默听和了'>): Breakdown | null {
   return breakdown(s.立直和了, s.副露和了, s.默听和了);
 }

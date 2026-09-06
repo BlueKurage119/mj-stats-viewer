@@ -6,16 +6,17 @@
 import type { PlayerExtendedStats } from '../api';
 import type { Breakdown } from '../domain';
 import { dealInBreakdown, dealInStateBreakdown, winBreakdown } from '../domain';
-import type { HandColorKey } from '../theme/seeds';
 import { percentTenths, toDonutArcs } from './donutShared';
 
 export type DonutKey = 'winState' | 'dealInState' | 'dealInTarget';
 
-const SLICE_KEYS: readonly HandColorKey[] = ['hand-riichi', 'hand-furo', 'hand-menzen'];
+export type SliceColorRole = 'primary' | 'tertiary' | 'secondary';
+
+const SLICE_KEYS: readonly SliceColorRole[] = ['primary', 'tertiary', 'secondary'];
 
 export interface WinLoseSlice {
-  readonly key: HandColorKey; // React key 兼 色トークン名
-  readonly label: string; // '立直' | '副露' | '黙聴' | '門前'
+  readonly key: SliceColorRole; // React key 兼 MD3 システムロール名
+  readonly label: string; // '立直' | '副露' | '闇聴' | '門前'
   readonly rate: number; // 0..1（丸め前）
   readonly percentText: string; // '36.2'（% 記号なし。3枚合計は常に '100.0' 相当）
   readonly arcLength: number | null;
@@ -41,13 +42,13 @@ interface DonutSpec {
 }
 
 const DONUT_SPECS: readonly DonutSpec[] = [
-  { key: 'winState', title: '和了時の状態', labels: ['立直', '副露', '黙聴'], breakdown: winBreakdown },
+  { key: 'winState', title: '和了時の状態', labels: ['立直', '副露', '闇聴'], breakdown: winBreakdown },
   { key: 'dealInState', title: '放銃時の状態', labels: ['立直', '副露', '門前'], breakdown: dealInStateBreakdown },
-  { key: 'dealInTarget', title: '放銃相手の状態', labels: ['立直', '副露', '黙聴'], breakdown: dealInBreakdown },
+  { key: 'dealInTarget', title: '放銃相手の状態', labels: ['立直', '副露', '闇聴'], breakdown: dealInBreakdown },
 ];
 
 /**
- * ドーナツごとの固定ラベル3つ（立直/副露/黙聴 or 門前）。
+ * ドーナツごとの固定ラベル3つ（立直/副露/闇聴 or 門前）。
  * このドーナツが空（slices === null）のときでも、カード側が凡例のラベル列だけは
  * 表示し続けるために使う（§4.5「凡例は3行のまま値を — にする」）。
  */
