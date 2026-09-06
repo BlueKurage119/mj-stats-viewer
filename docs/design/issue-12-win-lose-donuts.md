@@ -507,7 +507,7 @@ export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, num
 
 エージェントが原理的に判断できないものを1件だけ挙げる。製造・検収では判定しない。
 
-- **V-?: 3区分色（紫・ティール・スレート）の見た目**。特に (1) light の `hand-menzen` `#728a96` がカード2の `rank-2`（銀 `#50585f`）と混同されないか、(2) dark の `hand-riichi` `#ddafff` が段位シード（雀聖=赤 / 魂天=青）の primary と喧嘩しないか、(3) 3枚のドーナツで同じ色が同じ意味に読めるか。手順書は検収フェーズで `docs/ui-verification/` に追加する。
+- **V-?: 3区分色（紫・ティール・スレート）の見た目**。特に (1) light の `hand-menzen` `#728a96` がカード2の `rank-2`（銀 `#50585f`）と混同されないか、(2) dark の `hand-riichi` `#ddafff` が段位シード（雀聖=赤 / 魂天=青）の primary と喧嘩しないか、(3) 3枚のドーナツで同じ色が同じ意味に読めるか。手順書は検収フェーズで作成した: [docs/ui-verification/2026-09-06-issue-12-win-lose-donuts.md](../ui-verification/2026-09-06-issue-12-win-lose-donuts.md)。
 
 ---
 
