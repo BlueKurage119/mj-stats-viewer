@@ -33,6 +33,10 @@ async function bootstrap() {
         const { KeyStatsGallery } = await import('./dev/KeyStatsGallery');
         return <KeyStatsGallery />;
       },
+      '#/__winlose': async () => {
+        const { WinLoseGallery } = await import('./dev/WinLoseGallery');
+        return <WinLoseGallery />;
+      },
     };
     const match = Object.entries(devRoutes).find(([prefix]) => location.hash.startsWith(prefix));
     if (match) {
