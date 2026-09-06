@@ -180,9 +180,15 @@
   vertical-align: middle;
 }
 
-.stats-row__info-btn:hover,
+/* タップやマウスクリック時のフォーカス枠を抑制（キーボード操作の focus-visible は維持） */
+.stats-row__info-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* キーボード操作用フォーカス表示 (全端末共通) */
 .stats-row__info-btn:focus-visible {
   color: var(--md-sys-color-primary);
+  outline: 2px solid var(--md-sys-color-primary);
 }
 
 .stats-row__info-icon {
@@ -243,8 +249,12 @@
   visibility: visible;
 }
 
-/* PC等のホバー可能デバイスでのみ hover による表示を有効化（タッチ端末の sticky hover を防止） */
+/* PC等のホバー可能デバイスでのみ hover による色・ツールチップ表示を有効化（タッチ端末の sticky hover を防止） */
 @media (hover: hover) {
+  .stats-row__info-btn:hover {
+    color: var(--md-sys-color-primary);
+  }
+
   .stats-row:has(.stats-row__info-btn:hover) .stats-row__tip {
     opacity: 1;
     visibility: visible;

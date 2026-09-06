@@ -135,7 +135,10 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                             const willClose = openTipKey === r.key;
                             setOpenTipKey(willClose ? null : r.key);
                             if (willClose) {
-                              e.currentTarget.blur();
+                              const btn = e.currentTarget;
+                              requestAnimationFrame(() => {
+                                btn.blur();
+                              });
                             }
                           }}
                         >
