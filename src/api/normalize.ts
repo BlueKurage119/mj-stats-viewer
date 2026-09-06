@@ -3,7 +3,7 @@
  *
  * 変換内容はこの3点だけ:
  *   1. count の改名（gameCount / roundCount。§4.2）
- *   2. 回数系6キーの ?? 0 補完（§4.4）
+ *   2. 回数系12キーの ?? 0 補完（§4.4。うち6キーは issue-12 §4.1 で追加）
  *   3. 秒単位時刻のミリ秒 number 化（`Ms` サフィックス。§4.3。Issue 23 §1.2で Date から変更）
  * それ以外のキー名は中国語キー含めワイヤのまま維持する。
  *
@@ -60,6 +60,12 @@ export function normalizePlayerExtendedStats(raw: RawPlayerExtendedStats): Playe
     累计役满,
     W立直,
     流满,
+    放铳至立直,
+    放铳至副露,
+    放铳至默听,
+    立直和了,
+    副露和了,
+    默听和了,
     最近大铳,
     id: _id,
     played_modes: _playedModes,
@@ -74,6 +80,14 @@ export function normalizePlayerExtendedStats(raw: RawPlayerExtendedStats): Playe
     累计役满: 累计役满 ?? 0,
     W立直: W立直 ?? 0,
     流满: 流满 ?? 0,
+    // issue-12 §4.1: 回数系6キー（和了時の状態3・放銃相手の状態3）も同じ形で 0 補完する。
+    // `放铳至*` は率(0..1)だが、0省略の実挙動が未確認のため予防的に補完している（§1.3・§8）。
+    放铳至立直: 放铳至立直 ?? 0,
+    放铳至副露: 放铳至副露 ?? 0,
+    放铳至默听: 放铳至默听 ?? 0,
+    立直和了: 立直和了 ?? 0,
+    副露和了: 副露和了 ?? 0,
+    默听和了: 默听和了 ?? 0,
     ...rest,
     recentBigLoss: 最近大铳
       ? {

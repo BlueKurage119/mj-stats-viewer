@@ -66,6 +66,27 @@ describe('normalizePlayerExtendedStats', () => {
     const result = normalizePlayerExtendedStats(extendedStatsRaw);
     expect(result.平均起手向听子).toBeUndefined();
   });
+
+  // issue-12 §6-6: 回数系6キー（和了時の状態3・放銃相手の状態3）を全て省略した raw を通し、
+  // 6キーが全て 0 になることを検証する。
+  it('issue-12: 和了/放銃相手の回数系6キーを全て省略しても0で補完される', () => {
+    const raw: RawPlayerExtendedStats = { ...extendedStatsRaw };
+    delete raw.放铳至立直;
+    delete raw.放铳至副露;
+    delete raw.放铳至默听;
+    delete raw.立直和了;
+    delete raw.副露和了;
+    delete raw.默听和了;
+
+    const result = normalizePlayerExtendedStats(raw);
+
+    expect(result.放铳至立直).toBe(0);
+    expect(result.放铳至副露).toBe(0);
+    expect(result.放铳至默听).toBe(0);
+    expect(result.立直和了).toBe(0);
+    expect(result.副露和了).toBe(0);
+    expect(result.默听和了).toBe(0);
+  });
 });
 
 describe('normalizePlayerStats', () => {

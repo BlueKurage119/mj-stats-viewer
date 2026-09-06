@@ -52,7 +52,8 @@ export type RawRecentBigLoss = {
 
 /**
  * player_extended_stats の実レスポンス形状。
- * 回数系6キーは値0のときキー自体が省略される（§1.3 差分8）。
+ * 回数系12キーは値0のときキー自体が省略される（§1.3 差分8。うち `放铳至*` の3キーは
+ * 率だが 0 省略の実挙動が未確認のため予防的に補完している。issue-12 §1.3・§4.1）。
  * id / played_modes は本家型に無いが実レスポンスには含まれる（§1.3 差分3）。
  */
 export type RawPlayerExtendedStats = {
@@ -87,12 +88,12 @@ export type RawPlayerExtendedStats = {
   副露后和牌率: number;
   立直后流局率: number;
   副露后流局率: number;
-  放铳至立直: number;
-  放铳至副露: number;
-  放铳至默听: number;
-  立直和了: number;
-  副露和了: number;
-  默听和了: number;
+  放铳至立直?: number;
+  放铳至副露?: number;
+  放铳至默听?: number;
+  立直和了?: number;
+  副露和了?: number;
+  默听和了?: number;
   立直巡目: number;
   立直收支: number;
   立直收入: number;
