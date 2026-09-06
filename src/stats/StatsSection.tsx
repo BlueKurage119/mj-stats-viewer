@@ -36,13 +36,13 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                 {section.rows.map((r) => (
                   <tr key={r.key} data-row={r.key} className="stats-table__row">
                     <td className="stats-table__cell stats-table__cell--label">{r.label}</td>
-                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value">
+                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
                       {r.countText}
                     </td>
-                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value">
+                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
                       {r.percentText}
                     </td>
-                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value">
+                    <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
                       {r.avgScoreText}
                     </td>
                   </tr>
@@ -72,10 +72,10 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                         {groupRows.map((r) => (
                           <tr key={r.key} data-row={r.key} className="stats-table__row">
                             <td className="stats-table__cell stats-table__cell--label">{r.label}</td>
-                            <td className="stats-table__cell stats-table__cell--num stats-table__cell--value">
+                            <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
                               {r.countText}
                             </td>
-                            <td className="stats-table__cell stats-table__cell--num stats-table__cell--value">
+                            <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
                               {r.percentText}
                             </td>
                           </tr>
@@ -115,7 +115,10 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                         </button>
                       )}
                     </span>
-                    <span slot="trailing-supporting-text" className="stats-row__value">
+                    <span
+                      slot="trailing-supporting-text"
+                      className="stats-row__value md-typescale-title-medium numeric"
+                    >
                       {r.valueText}
                     </span>
                   </ListItem>

@@ -230,4 +230,17 @@ describe('StatsSection & DOM structure', () => {
       expect(html).toContain(row.percentText!);
     }
   });
+
+  // 指摘3: 値要素に md-typescale-title-medium numeric クラスが付与されていること
+  it('値要素に md-typescale-title-medium と numeric クラスが付与されている', () => {
+    // リスト形式セクション
+    const overall1 = sections4p.find((s) => s.id === 'overall1')!;
+    const overallHtml = renderToStaticMarkup(<StatsSection section={overall1} />);
+    expect(overallHtml).toContain('stats-row__value md-typescale-title-medium numeric');
+
+    // 表形式セクション
+    const rankSection = sections4p.find((s) => s.id === 'rank')!;
+    const rankHtml = renderToStaticMarkup(<StatsSection section={rankSection} />);
+    expect(rankHtml).toContain('stats-table__cell--value md-typescale-title-medium numeric');
+  });
 });

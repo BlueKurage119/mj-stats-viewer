@@ -42,13 +42,13 @@
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--md-sys-typescale-body-medium-size);
+  font-size: var(--md-sys-typescale-body-medium-size, 0.875rem);
 }
 
 .stats-table__th {
   padding: 8px 12px;
   text-align: left;
-  font-size: var(--md-sys-typescale-label-medium-size);
+  font-size: var(--md-sys-typescale-label-medium-size, 0.75rem);
   font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
@@ -74,7 +74,7 @@
 
 .stats-table__cell--label {
   text-align: left;
-  font-size: var(--md-sys-typescale-body-medium-size);
+  font-size: var(--md-sys-typescale-body-medium-size, 0.875rem);
   white-space: nowrap;
 }
 
@@ -85,7 +85,8 @@
 
 /* 修正4: 数値セルを見出しより大きく */
 .stats-table__cell--value {
-  font-size: var(--md-sys-typescale-title-medium-size);
+  font-size: var(--md-sys-typescale-title-medium-size, 1rem);
+  line-height: var(--md-sys-typescale-title-medium-line-height, 1.5rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -112,19 +113,29 @@
    ========================================================================== */
 
 .stats-section__list {
+  /* 指摘1: md-listの背景をカードの背景（surface-container-low）に透過して合わせる */
+  --md-list-container-color: transparent;
+  --md-list-item-container-color: transparent;
+  background-color: transparent;
   /* 1行アイテムに変わったので one-line 側を詰める（既定 56px） */
   --md-list-item-one-line-container-height: 48px;
   --md-list-item-top-space: 4px;
   --md-list-item-bottom-space: 4px;
   /* 修正4: 値テキストをラベルより大きく (body-medium: 14px -> title-medium: 16px, 500) */
-  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-title-medium-size);
-  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-title-medium-line-height);
+  --md-list-item-trailing-supporting-text-size: var(--md-sys-typescale-title-medium-size, 1rem);
+  --md-list-item-trailing-supporting-text-line-height: var(--md-sys-typescale-title-medium-line-height, 1.5rem);
   --md-list-item-trailing-supporting-text-weight: 500;
   --md-list-item-trailing-supporting-text-color: var(--md-sys-color-on-surface);
 }
 
 .stats-row {
   position: relative;
+  /* 指摘2: list内の行間に罫線を入れる */
+  border-bottom: 1px solid var(--md-sys-color-surface-container-highest);
+}
+
+.stats-row:last-child {
+  border-bottom: none;
 }
 
 .stats-row__headline {
@@ -163,10 +174,10 @@
   height: 16px;
 }
 
-/* 修正4: 値の文字サイズ拡大 */
+/* 修正4 / 指摘3: 値の文字サイズ拡大（フォールバック 1rem / 1.5rem を明示） */
 .stats-row__value {
-  font-size: var(--md-sys-typescale-title-medium-size);
-  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-size: var(--md-sys-typescale-title-medium-size, 1rem);
+  line-height: var(--md-sys-typescale-title-medium-line-height, 1.5rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -200,8 +211,8 @@
   border-radius: 6px;
   background: var(--md-sys-color-inverse-surface);
   color: var(--md-sys-color-inverse-on-surface);
-  font-size: var(--md-sys-typescale-body-small-size);
-  line-height: var(--md-sys-typescale-body-small-line-height);
+  font-size: var(--md-sys-typescale-body-small-size, 0.75rem);
+  line-height: var(--md-sys-typescale-body-small-line-height, 1rem);
   /* 既定は非表示。display:none にはしない（aria-describedby を殺さないため） */
   opacity: 0;
   visibility: hidden;
