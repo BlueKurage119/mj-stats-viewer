@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import rawExtendedFixture from '../api/testdata/player_extended_stats.json';
 import { normalizePlayerExtendedStats } from '../api/normalize';
 import playerStatsFixture from '../domain/__fixtures__/player_stats_4p.json';
@@ -33,6 +33,22 @@ export function StatsGallery(): ReactElement {
   const { modeSetting, setModeSetting } = useTheme();
   const [numPlayers, setNumPlayers] = useState<3 | 4>(4);
   const [hasExtended, setHasExtended] = useState<boolean>(true);
+  const [openTipId, setOpenTipId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openTipId === null) return;
+    const handleOutsidePointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.stats-row__info-btn') || target?.closest('.stats-row__tip')) {
+        return;
+      }
+      setOpenTipId(null);
+    };
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+    };
+  }, [openTipId]);
 
   const stats = numPlayers === 4 ? baseStats4p : baseStats3p;
   const extended: PlayerExtendedStats | null = hasExtended ? normExtended : null;
@@ -123,7 +139,12 @@ export function StatsGallery(): ReactElement {
         </p>
 
         {sections.map((section) => (
-          <StatsSection key={section.id} section={section} />
+          <StatsSection
+            key={section.id}
+            section={section}
+            openTipId={openTipId}
+            onToggleTip={setOpenTipId}
+          />
         ))}
       </main>
     </div>

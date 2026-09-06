@@ -272,4 +272,19 @@ describe('StatsSection & DOM structure', () => {
     const distHtml = renderToStaticMarkup(<StatsSection section={distSection} />);
     expect(distHtml).toContain('stats-table stats-table--dist');
   });
+
+  // 単一アクティブ制御: openTipId が親から渡された場合、指定された行のみ tip-open となること
+  it('親から openTipId が渡された場合、指定行のみ data-tip-open="true" と aria-expanded="true" になる', () => {
+    const overall1 = sections4p.find((s) => s.id === 'overall1')!;
+    const targetTipId = `tip-overall1-gameCount`;
+    const html = renderToStaticMarkup(
+      <StatsSection section={overall1} openTipId={targetTipId} />,
+    );
+    expect(html).toContain('data-row="gameCount" data-has-note="true" data-tip-open="true"');
+    expect(html).toContain('aria-describedby="tip-overall1-gameCount" aria-expanded="true"');
+
+    // 別の行（例: roundCount）は data-tip-open="false" かつ aria-expanded="false"
+    expect(html).toContain('data-row="roundCount" data-has-note="true" data-tip-open="false"');
+    expect(html).toContain('aria-describedby="tip-overall1-roundCount" aria-expanded="false"');
+  });
 });

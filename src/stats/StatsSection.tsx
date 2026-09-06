@@ -4,6 +4,8 @@ import type { StatSectionView } from './statsView';
 
 export interface StatsSectionProps {
   readonly section: StatSectionView;
+  readonly openTipId?: string | null;
+  readonly onToggleTip?: (tipId: string | null) => void;
 }
 
 const DIST_GROUPS = [
@@ -12,23 +14,31 @@ const DIST_GROUPS = [
   { key: 'dealInTarget', title: '放銃相手の状態' },
 ] as const;
 
-export function StatsSection({ section }: StatsSectionProps): ReactElement {
-  const [openTipKey, setOpenTipKey] = useState<string | null>(null);
+export function StatsSection({
+  section,
+  openTipId: externalOpenTipId,
+  onToggleTip: externalOnToggleTip,
+}: StatsSectionProps): ReactElement {
+  const [internalOpenTipId, setInternalOpenTipId] = useState<string | null>(null);
+
+  const isControlled = externalOpenTipId !== undefined;
+  const currentOpenTipId = isControlled ? externalOpenTipId : internalOpenTipId;
+  const setOpenTip = externalOnToggleTip ?? setInternalOpenTipId;
 
   useEffect(() => {
-    if (openTipKey === null) return;
+    if (isControlled || currentOpenTipId === null) return;
     const handleOutsidePointer = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest('.stats-row__info-btn') || target?.closest('.stats-row__tip')) {
         return;
       }
-      setOpenTipKey(null);
+      setOpenTip(null);
     };
     document.addEventListener('pointerdown', handleOutsidePointer);
     return () => {
       document.removeEventListener('pointerdown', handleOutsidePointer);
     };
-  }, [openTipKey]);
+  }, [isControlled, currentOpenTipId, setOpenTip]);
 
   return (
     <ElevatedCard className="stats-section-card" data-section={section.id}>
@@ -110,8 +120,8 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
           <List className="stats-section__list">
             {section.rows.map((r) => {
               const hasNote = r.note.length > 0;
-              const isTipOpen = openTipKey === r.key;
               const tipId = `tip-${section.id}-${r.key}`;
+              const isTipOpen = currentOpenTipId === tipId;
               return (
                 <div
                   className="stats-row"
@@ -132,8 +142,8 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                           aria-expanded={isTipOpen}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const willClose = openTipKey === r.key;
-                            setOpenTipKey(willClose ? null : r.key);
+                            const willClose = currentOpenTipId === tipId;
+                            setOpenTip(willClose ? null : tipId);
                             if (willClose) {
                               const btn = e.currentTarget;
                               requestAnimationFrame(() => {

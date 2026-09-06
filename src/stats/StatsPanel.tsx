@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { usePlayerScope } from '../filters/playerScope';
 import { NO_GAMES_IN_PERIOD_MESSAGE } from '../filters/filterState';
 import { preferredMode } from '../domain';
@@ -13,6 +13,22 @@ import './stats.css';
 export function StatsPanel(): ReactElement {
   const scope = usePlayerScope();
   const { numPlayers, stats, identity, filter } = scope;
+  const [openTipId, setOpenTipId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openTipId === null) return;
+    const handleOutsidePointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.stats-row__info-btn') || target?.closest('.stats-row__tip')) {
+        return;
+      }
+      setOpenTipId(null);
+    };
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+    };
+  }, [openTipId]);
 
   if (stats.kind === 'loading') {
     const defaultSectionRowCounts: Record<string, number> = {
@@ -110,7 +126,12 @@ export function StatsPanel(): ReactElement {
       </p>
 
       {sections.map((section) => (
-        <StatsSection key={section.id} section={section} />
+        <StatsSection
+          key={section.id}
+          section={section}
+          openTipId={openTipId}
+          onToggleTip={setOpenTipId}
+        />
       ))}
     </div>
   );
