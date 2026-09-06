@@ -159,8 +159,13 @@
   box-sizing: border-box;
   padding-bottom: calc(80px + 16px + env(safe-area-inset-bottom, 0px));
   /* タブ遷移アニメーション(translateX)がページの水平スクロール幅を一瞬超え、
-     スクロールバー出現→固定ナビの再レイアウトを引き起こすため水平方向のみ clip する */
-  overflow-x: hidden;
+     スクロールバー出現→固定ナビの再レイアウトを引き起こすため水平方向のみ clip する。
+     【Issue #13 R-1】overflow-x: hidden は仕様上 overflow-y を auto に格上げして
+     スクロールコンテナを形成し、内部の sticky（比較タブのコンテキストバー等）を機能不全にする。
+     実測: hidden だと scrollY=600 で sticky top が -540px になるが、
+     clip (overflow-clip-margin: 0) ならスクロールコンテナを作らず sticky が 64px に正しく貼り付く。 */
+  overflow-x: clip;
+  overflow-clip-margin: 0;
 }
 
 .tab-transition[data-direction="1"] {
