@@ -132,7 +132,11 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                           aria-expanded={isTipOpen}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenTipKey((prev) => (prev === r.key ? null : r.key));
+                            const willClose = openTipKey === r.key;
+                            setOpenTipKey(willClose ? null : r.key);
+                            if (willClose) {
+                              e.currentTarget.blur();
+                            }
                           }}
                         >
                           <Icon className="stats-row__info-icon">info</Icon>
