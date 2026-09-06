@@ -9,9 +9,12 @@ import {
 import {
   DELTA_GOOD_SOURCE,
   DELTA_GOOD_TONES,
+  HAND_COLOR_SOURCES,
+  HAND_COLOR_TONES,
   RANK_COLOR_SOURCES,
   RANK_COLOR_TONES,
   SECTION_COLORS,
+  type HandColorKey,
   type RankColorKey,
   type SectionKey,
 } from './seeds';
@@ -35,6 +38,7 @@ const customColorDefs = sectionKeys.map((key) => ({
 const themeCache = new Map<string, Theme>();
 
 const rankColorKeys = Object.keys(RANK_COLOR_SOURCES) as RankColorKey[];
+const handColorKeys = Object.keys(HAND_COLOR_SOURCES) as HandColorKey[];
 
 /** 差分チップの「良い」色。1色しか無いのでキャッシュ Map は不要（issue-11 §5.2） */
 const deltaGoodPalette = TonalPalette.fromInt(argbFromHex(DELTA_GOOD_SOURCE));
@@ -48,6 +52,19 @@ function rankPalette(key: RankColorKey): TonalPalette {
   if (!palette) {
     palette = TonalPalette.fromInt(argbFromHex(source));
     rankPaletteCache.set(source, palette);
+  }
+  return palette;
+}
+
+/** 色相ソースごとの TonalPalette をメモ化する（取りうるソースは3種のみ。issue-12 §5） */
+const handPaletteCache = new Map<string, TonalPalette>();
+
+function handPalette(key: HandColorKey): TonalPalette {
+  const source = HAND_COLOR_SOURCES[key];
+  let palette = handPaletteCache.get(source);
+  if (!palette) {
+    palette = TonalPalette.fromInt(argbFromHex(source));
+    handPaletteCache.set(source, palette);
   }
   return palette;
 }
@@ -157,6 +174,13 @@ export function applyMd3Theme(seed: string, dark: boolean): void {
   for (const key of rankColorKeys) {
     const palette = rankPalette(key);
     root.style.setProperty(`--md-custom-color-${key}`, hexFromArgb(palette.tone(rankTones[key])));
+  }
+
+  // 和銃分布ドーナツの区分色 → --md-custom-color-hand-*（段位シードから独立。issue-12 §5）
+  const handTones = dark ? HAND_COLOR_TONES.dark : HAND_COLOR_TONES.light;
+  for (const key of handColorKeys) {
+    const palette = handPalette(key);
+    root.style.setProperty(`--md-custom-color-${key}`, hexFromArgb(palette.tone(handTones[key])));
   }
 
   // 差分チップの「良い」色 → --md-custom-color-delta-good（段位シードから独立。issue-11 §5）

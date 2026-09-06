@@ -100,3 +100,22 @@ export const RANK_COLOR_TONES: Record<'light' | 'dark', Record<RankColorKey, num
  */
 export const DELTA_GOOD_SOURCE = '#2E7D32';
 export const DELTA_GOOD_TONES: Record<'light' | 'dark', number> = { light: 40, dark: 80 };
+
+/** 和銃分布ドーナツの区分色（立直/副露/門前）。3枚のドーナツで共通。issue-12 §2.3 */
+export type HandColorKey = 'hand-riichi' | 'hand-furo' | 'hand-menzen';
+
+export const HAND_COLOR_SOURCES: Record<HandColorKey, string> = {
+  'hand-riichi': '#9C5BD1', // 立直: パープル（SECTION_COLORS.riichi と同値。ただし customColor 経由ではない）
+  'hand-furo': '#00897B', // 副露: ティール
+  'hand-menzen': '#78909C', // 門前・黙聴: スレート（残余カテゴリなので最も低彩度）
+};
+
+/**
+ * 区分ごとに違うトーンを当てる。MD3 の customColor ロール（light 40 / dark 80 固定）だと
+ * 3色の輝度が揃い、隣接コントラストが 1.00 になってグレースケールで区別できなくなる
+ * （issue-9 §1.2 実測）。順位色と同じ手口。
+ */
+export const HAND_COLOR_TONES: Record<'light' | 'dark', Record<HandColorKey, number>> = {
+  light: { 'hand-riichi': 48, 'hand-furo': 40, 'hand-menzen': 56 },
+  dark: { 'hand-riichi': 78, 'hand-furo': 70, 'hand-menzen': 88 },
+};
