@@ -237,10 +237,22 @@
   transition: opacity 120ms ease;
 }
 
-/* info アイコンボタンに hover (PC) または focus-visible (キーボード) したとき、あるいはタップで開いたとき (タッチ端末) 表示 */
-.stats-row:has(.stats-row__info-btn:hover) .stats-row__tip,
-.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip,
+/* タップで開いたとき表示 (全端末共通) */
 .stats-row[data-tip-open="true"] .stats-row__tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* PC等のホバー可能デバイスでのみ hover による表示を有効化（タッチ端末の sticky hover を防止） */
+@media (hover: hover) {
+  .stats-row:has(.stats-row__info-btn:hover) .stats-row__tip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* キーボード操作用の focus-visible 表示 */
+.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip {
   opacity: 1;
   visibility: visible;
 }

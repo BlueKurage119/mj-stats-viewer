@@ -17,12 +17,16 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
 
   useEffect(() => {
     if (openTipKey === null) return;
-    const handleOutsideClick = () => {
+    const handleOutsidePointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.stats-row__info-btn') || target?.closest('.stats-row__tip')) {
+        return;
+      }
       setOpenTipKey(null);
     };
-    document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('pointerdown', handleOutsidePointer);
     return () => {
-      document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('pointerdown', handleOutsidePointer);
     };
   }, [openTipKey]);
 
