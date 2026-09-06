@@ -91,19 +91,25 @@ describe('growthView', () => {
     expect(rowInvalid?.valueText).toBe('—');
   });
 
-  // A3-4: 50戦後の見込み
-  it('A3-4: projection50 が projectAfterGames(eff, delta, 50) と一致し PROJECTION_GAMES が 50', () => {
+  // A3-4: 50戦後の見込み（段位Ptは小数点以下四捨五入）
+  it('A3-4: projection50 が projectAfterGames(eff, delta, 50) の四捨五入結果と一致し PROJECTION_GAMES が 50', () => {
     expect(PROJECTION_GAMES).toBe(50);
 
     const view = buildGrowthView(defaultInput);
     const eff = effectiveLevelPoint(defaultInput.level);
     const expectedProj = projectAfterGames(eff, view.expectedPoint!, 50);
     const projLevel = parseLevelId(expectedProj.levelId);
-    const expectedText = `${getLevelTagFromId(expectedProj.levelId)} ${formatAdjustedScore(projLevel, expectedProj.point)}`;
+    const expectedText = `${getLevelTagFromId(expectedProj.levelId)} ${formatAdjustedScore(projLevel, Math.round(expectedProj.point))}`;
 
     const row = view.rows.find((r) => r.key === 'projection50');
     expect(row?.valueText).toBe(expectedText);
     expect(row?.note).toContain('50戦');
+
+    // 小数点を含む期待値で確実に四捨五入されて整数になることを検証
+    // defaultInput (expectedPoint が小数を含むケース) で「.」がスコア部に含まれないこと（魂天以外）
+    const scorePart = row?.valueText.split(' ')[1]; // 例: '1074/2000'
+    const currentPtStr = scorePart?.split('/')[0];
+    expect(currentPtStr).not.toContain('.');
   });
 
   // A3-5: estimateStableLevel2 に渡す引数が生の id/score/delta であること

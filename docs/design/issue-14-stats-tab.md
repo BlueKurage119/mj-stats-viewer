@@ -350,19 +350,20 @@ CLI の出力順は 放銃率 → 和了率 → 流局率。**副露率はここ
 
 | key | statsKey | ラベル | 回数の出所 | 割合の出所 | |
 |---|---|---|---|---|---|
-| `winStateRiichi` | `立直和了` | 和了時 立直 | **API 生カウント（実測値）** | `立直和了 / W` | 確 |
-| `winStateCall` | `副露和了` | 和了時 副露 | **API 生カウント（実測値）** | `副露和了 / W` | 確 |
-| `winStateDamaten` | `默听和了` | 和了時 闇聴 | **API 生カウント（実測値）** | `默听和了 / W` | 確 |
-| `dealInStateRiichi` | `放铳时立直率` | 放銃時 立直 | **概算** `round(D × 放铳时立直率)` | `放铳时立直率`（API 生の率） | 確 |
-| `dealInStateCall` | `放铳时副露率` | 放銃時 副露 | **概算** `round(D × 放铳时副露率)` | `放铳时副露率`（API 生の率） | 確 |
-| *(導出)* `dealInStateConcealed` | — | 放銃時 門前 | **概算** `round(D × 門前率)` | `dealInStateBreakdown().默听` | 確 |
-| `dealInTargetRiichi` | `放铳至立直` | 放銃相手 立直 | **API 生カウント（実測値）** | `放铳至立直 / dealInTargetTotal` | 確 |
-| `dealInTargetCall` | `放铳至副露` | 放銃相手 副露 | **API 生カウント（実測値）** | `放铳至副露 / dealInTargetTotal` | 確 |
-| `dealInTargetDamaten` | `放铳至默听` | 放銃相手 闇聴 | **API 生カウント（実測値）** | `放铳至默听 / dealInTargetTotal` | 確 |
+| `winStateRiichi` | `立直和了` | 立直 | **API 生カウント（実測値）** | `立直和了 / W` | 確 |
+| `winStateCall` | `副露和了` | 副露 | **API 生カウント（実測値）** | `副露和了 / W` | 確 |
+| `winStateDamaten` | `默听和了` | 闇聴 | **API 生カウント（実測値）** | `默听和了 / W` | 確 |
+| `dealInStateRiichi` | `放铳时立直率` | 立直 | **概算** `round(D × 放铳时立直率)` | `放铳时立直率`（API 生の率） | 確 |
+| `dealInStateCall` | `放铳时副露率` | 副露 | **概算** `round(D × 放铳时副露率)` | `放铳时副露率`（API 生の率） | 確 |
+| *(導出)* `dealInStateConcealed` | — | 門前 | **概算** `round(D × 門前率)` | `dealInStateBreakdown().默听` | 確 |
+| `dealInTargetRiichi` | `放铳至立直` | 立直 | **API 生カウント（実測値）** | `放铳至立直 / dealInTargetTotal` | 確 |
+| `dealInTargetCall` | `放铳至副露` | 副露 | **API 生カウント（実測値）** | `放铳至副露 / dealInTargetTotal` | 確 |
+| `dealInTargetDamaten` | `放铳至默听` | 闇聴 | **API 生カウント（実測値）** | `放铳至默听 / dealInTargetTotal` | 確 |
 
 > [!NOTE]
-> **2026-09-07 実データで訂正**:
-> `放铳至*` 3キーは率ではなく整数の生カウント（和了者クレジット数）であることが判明したため、「放銃相手の状態」は和了時3行と同様に実測カウントと割合（「約」なし）を表示する。
+> **2026-09-07 実データで訂正および表形式化に伴うラベル簡潔化**:
+> - `放铳至*` 3キーは率ではなく整数の生カウント（和了者クレジット数）であることが判明したため、「放銃相手の状態」は和了時3行と同様に実測カウントと割合（「約」なし）を表示する。
+> - 小表化（「和了時の状態」「放銃時の状態」「放銃相手の状態」）に伴い、テーブル「状態」列のラベルからセクションプレフィックスを除去し、「立直」「副露」「闇聴」「門前」に簡潔化した。
 
 記号:
 
@@ -473,7 +474,7 @@ statsKey: 8 + 5 + **16** + 3 + 8 + 12 = **52**（総合成績1 と成長指標�
 |---|---|---|---|---|
 | `expectedPoint` | 段位pt期待値 | `expectedPointPerGame(rankRates, rankAvgScores, mode, effLevel)`（`includePenalty` 既定 true） | 小数2桁 + `pt/戦`。負は U+2212 | `{卓名}の間・{半荘\|東風}基準` |
 | `gamesToBoundary` | `昇段まで` / `降段まで` / `昇降段まで` | `delta > 0` → `gamesToPromotion(eff, delta)` / `delta < 0` → `gamesToDemotion(eff, delta)` / `delta === 0` → 計算しない | `{n}戦`。`null` は `—` | `現在 {formatAdjustedScore(effLevel, eff.point)}` |
-| `projection50` | 50戦後の見込み | `projectAfterGames(eff, delta, 50)` | `{getLevelTagFromId(levelId)} {formatAdjustedScore(level, point)}` 例: `雀傑3 480/1800` | `{卓名}の間・{半荘\|東風}を50戦打った場合` |
+| `projection50` | 50戦後の見込み | `projectAfterGames(eff, delta, 50)` | `{getLevelTagFromId(levelId)} {formatAdjustedScore(level, round(point))}` 例: `雀傑3 480/1800`（※2026-09-07指示: 見込み段位Ptは小数点以下四捨五入） | `{卓名}の間・{半荘\|東風}を50戦打った場合` |
 | `stableLevel` | 安定段位 | `estimateStableLevel2({levelId: identity.level.id, score: identity.level.score, delta: identity.level.delta, rankRates, rankAvgScores}, mode)` | §3.4 | `{卓名}の間・{半荘\|東風}基準` |
 | `maxLevel` | 最高段位 | `scope.stats.stats.max_level`（計算なし） | `getLevelTagFromId(max_level.id)`（例 `雀聖1`） | 選択中の期間・モードで到達した最高段位 |
 
@@ -1097,7 +1098,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
   期待値 < 0 のとき ラベルが `降段まで` で値が `gamesToDemotion` の戻り値 + `戦`、
   `null` のとき値が `—`
 - [ ] **A3-4** 単体テスト: `projection50` が `projectAfterGames(eff, delta, 50)` の結果と一致し、
-  表示が `{段位タグ} {formatAdjustedScore}` 形式であること。**`PROJECTION_GAMES` が 50**
+  表示が `{段位タグ} {formatAdjustedScore}` 形式であること（段位Ptは小数点以下四捨五入）。**`PROJECTION_GAMES` が 50**
 - [ ] **A3-5** 単体テスト: `estimateStableLevel2` に渡す `StableLevelInput` が
   **`identity.level` の生の `id`/`score`/`delta`** であること（`effectiveLevelPoint` を通していないこと）。
   実行: `estimateStableLevel2` をスパイして引数を検証するテスト、または
@@ -1204,6 +1205,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 > - **回数列と割合列の分離**: 和了時3行および放銃相手3行は実測回数（「約」なし）、放銃時3行のみ概算回数（「約」表記をセル内に維持）。
 > - **注記の削除**: 表内に回数と割合が独立して表示されるため、ツールチップ経由の注記（A9-9）は不要（削除）。
 > - **放銃相手3行の実測値化**: `放铳至*` 3キーが生カウントであることが判明したため、実測値（「約」なし）として扱う。
+> - **状態ラベルの簡潔化**: 表見出しとの重複を解消するため、「和了時 立直」等のプレフィックスを除去し「立直」「副露」「闇聴」「門前」と表示する。
 
 - [ ] **A9-1** 単体テスト: `formatDistributionValue` が §4.3 の5ケース表どおりであること。
   `{count:21, rate:0.362, approximate:false}` → `21回 / 36.2%`、

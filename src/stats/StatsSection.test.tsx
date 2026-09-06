@@ -162,6 +162,14 @@ describe('StatsSection & DOM structure', () => {
     expect(distHtml).toContain('放銃相手の状態');
     expect(distHtml).not.toContain('stats-row__tip');
     expect(distHtml).not.toContain('stats-row__info-btn');
+    // テーブル内の状態列が簡潔に「立直」「副露」「闇聴」「門前」と表示される
+    expect(distHtml).toContain('<td class="stats-table__cell stats-table__cell--label">立直</td>');
+    expect(distHtml).toContain('<td class="stats-table__cell stats-table__cell--label">副露</td>');
+    expect(distHtml).toContain('<td class="stats-table__cell stats-table__cell--label">闇聴</td>');
+    expect(distHtml).toContain('<td class="stats-table__cell stats-table__cell--label">門前</td>');
+    expect(distHtml).not.toContain('和了時 立直');
+    expect(distHtml).not.toContain('放銃時 立直');
+    expect(distHtml).not.toContain('放銃相手 立直');
   });
 
   // A2-8: 要件 §8 の明示例

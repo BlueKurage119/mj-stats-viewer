@@ -7,6 +7,7 @@ import {
   gamesToPromotion,
   getLevelMajorTag,
   getLevelTagFromId,
+  getMaxPoint,
   parseLevelId,
   preferredMode,
   projectAfterGames,
@@ -174,12 +175,17 @@ export function buildGrowthView(input: GrowthInput): GrowthView {
       ? `現在 ${formatAdjustedScore(effLevel, eff.point)}`
       : '';
 
-  // 3. 50戦後の見込み
+  // 3. 50戦後の見込み（ポイントは小数点以下四捨五入）
   let projection50Text = '—';
   if (projVal !== null) {
     try {
       const projLevel = parseLevelId(projVal.levelId);
-      projection50Text = `${getLevelTagFromId(projVal.levelId)} ${formatAdjustedScore(projLevel, projVal.point)}`;
+      const maxPoint = getMaxPoint(projLevel);
+      let roundedPoint = Math.round(projVal.point);
+      if (maxPoint > 0) {
+        roundedPoint = Math.min(Math.max(roundedPoint, 0), maxPoint - 1);
+      }
+      projection50Text = `${getLevelTagFromId(projVal.levelId)} ${formatAdjustedScore(projLevel, roundedPoint)}`;
     } catch {
       projection50Text = '—';
     }
