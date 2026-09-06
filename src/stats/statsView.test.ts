@@ -330,17 +330,23 @@ describe('statsView', () => {
       expect(row.subGroup).toBe('dealInState');
     }
 
-    // 放銃相手3行: 概算値（約あり）、subGroup = 'dealInTarget'
+    // 放銃相手3行: 実測値（約なし）、subGroup = 'dealInTarget'、合計比率100%
     const dealInTargetKeys = [
       'dealInTargetRiichi',
       'dealInTargetCall',
       'dealInTargetDamaten',
     ];
+    const targetExpected: Record<string, { count: string; percent: string; value: string }> = {
+      dealInTargetRiichi: { count: '136回', percent: '50.6%', value: '136回 / 50.6%' },
+      dealInTargetCall: { count: '102回', percent: '37.9%', value: '102回 / 37.9%' },
+      dealInTargetDamaten: { count: '31回', percent: '11.5%', value: '31回 / 11.5%' },
+    };
     for (const k of dealInTargetKeys) {
       const row = distSection.rows.find((r) => r.key === k)!;
-      expect(row.countText).toContain('約');
-      expect(row.countText).toContain('回');
-      expect(row.percentText).toContain('%');
+      expect(row.countText).not.toContain('約');
+      expect(row.countText).toBe(targetExpected[k].count);
+      expect(row.percentText).toBe(targetExpected[k].percent);
+      expect(row.valueText).toBe(targetExpected[k].value);
       expect(row.subGroup).toBe('dealInTarget');
     }
   });

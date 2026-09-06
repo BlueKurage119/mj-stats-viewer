@@ -326,7 +326,23 @@ export function buildStatsView(input: {
 
         const winTotal = hasAllWinCounts ? winRiichi + winCall + winDamaten : null;
 
-        // 放銃時/相手
+        // 放銃相手（2026-09-07修正: 放铳至* は率ではなく整数の生カウント）
+        const targetRiichi = extended?.放铳至立直;
+        const targetCall = extended?.放铳至副露;
+        const targetDamaten = extended?.放铳至默听;
+        const hasAllTargetCounts =
+          typeof targetRiichi === 'number' &&
+          Number.isFinite(targetRiichi) &&
+          typeof targetCall === 'number' &&
+          Number.isFinite(targetCall) &&
+          typeof targetDamaten === 'number' &&
+          Number.isFinite(targetDamaten);
+
+        const dealInTargetTotal = hasAllTargetCounts
+          ? targetRiichi + targetCall + targetDamaten
+          : null;
+
+        // 放銃時（概算回数の算出用）
         const dealInRate = extended?.放铳率;
         const roundCount = extended?.roundCount;
         const canEstimateDealIn =
@@ -427,22 +443,22 @@ export function buildStatsView(input: {
             };
           }
 
-          // 放銃相手3行
-          const rawRate = extended ? (extended[spec.statsKey] as number) : null;
-          const isRateFinite = typeof rawRate === 'number' && Number.isFinite(rawRate);
-          const count =
-            dealInCount !== null && isRateFinite
-              ? Math.round(dealInCount * rawRate)
+          // 放銃相手3行（2026-09-07修正: 放铳至* は率ではなく整数の生カウント）
+          const count = extended ? (extended[spec.statsKey] as number) : null;
+          const isCountFinite = typeof count === 'number' && Number.isFinite(count);
+          const rate =
+            isCountFinite && dealInTargetTotal !== null && dealInTargetTotal > 0
+              ? count / dealInTargetTotal
               : null;
-          const countText = count !== null ? `約${count.toLocaleString('ja-JP')}回` : '—';
-          const percentText = isRateFinite ? formatStatValue(rawRate, 'rate') : '—';
+          const countText = isCountFinite ? `${count.toLocaleString('ja-JP')}回` : '—';
+          const percentText = rate !== null ? formatStatValue(rate, 'rate') : '—';
           return {
             key: spec.key,
             label: spec.label,
             valueText: formatDistributionValue({
-              count,
-              rate: isRateFinite ? rawRate : null,
-              approximate: true,
+              count: isCountFinite ? count : null,
+              rate,
+              approximate: false,
             }),
             note: '', // 2026-09-07 UI調整: 表形式化によりツールチップ注記は不要
             countText,

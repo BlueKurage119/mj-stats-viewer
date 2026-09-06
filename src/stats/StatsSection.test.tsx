@@ -194,7 +194,7 @@ describe('StatsSection & DOM structure', () => {
     expect(html).toContain('立直収入と立直支出の差とは必ずしも一致しない');
   });
 
-  // A9-2: 和銃分布セクションの回数表示（和了時3行は約なし、残り6行は約あり）
+  // A9-2: 和銃分布セクションの回数表示（和了時3行・放銃相手3行は約なし実測値、放銃時3行は約あり概算値）
   it('A9-2: 和銃分布の表内で実測値（約なし）と概算値（約あり）が区別される', () => {
     const distSection = sections4p.find((s) => s.id === 'distribution')!;
     const html = renderToStaticMarkup(<StatsSection section={distSection} />);
@@ -211,18 +211,31 @@ describe('StatsSection & DOM structure', () => {
       expect(html).toContain(row.percentText!);
     }
 
-    // 概算6行: dealInStateRiichi, dealInStateCall, dealInStateConcealed, dealInTargetRiichi, dealInTargetCall, dealInTargetDamaten
-    const estKeys = [
+    // 概算3行: dealInStateRiichi, dealInStateCall, dealInStateConcealed
+    const dealInStateKeys = [
       'dealInStateRiichi',
       'dealInStateCall',
       'dealInStateConcealed',
+    ];
+    for (const key of dealInStateKeys) {
+      const row = distSection.rows.find((r) => r.key === key)!;
+      expect(row.countText).toContain('約');
+      expect(row.countText).toContain('回');
+      expect(row.percentText).toContain('%');
+      expect(html).toContain(`data-row="${key}"`);
+      expect(html).toContain(row.countText!);
+      expect(html).toContain(row.percentText!);
+    }
+
+    // 実測3行（放銃相手）: dealInTargetRiichi, dealInTargetCall, dealInTargetDamaten
+    const targetKeys = [
       'dealInTargetRiichi',
       'dealInTargetCall',
       'dealInTargetDamaten',
     ];
-    for (const key of estKeys) {
+    for (const key of targetKeys) {
       const row = distSection.rows.find((r) => r.key === key)!;
-      expect(row.countText).toContain('約');
+      expect(row.countText).not.toContain('約');
       expect(row.countText).toContain('回');
       expect(row.percentText).toContain('%');
       expect(html).toContain(`data-row="${key}"`);
