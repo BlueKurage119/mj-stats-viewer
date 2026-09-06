@@ -55,9 +55,11 @@ export { calcRadar } from './radar';
 export type { Tendency, TendencyAxis, TendencyInput } from './tendency';
 export { calcTendency, toBand } from './tendency';
 
+export type { Breakdown } from './derived';
 export {
   averageScore,
   dealInBreakdown,
+  dealInStateBreakdown,
   lastPlaceRate,
   levelDistributionPosition,
   rentaiRate,

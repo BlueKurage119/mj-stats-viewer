@@ -6,6 +6,7 @@ import { LevelDetailCard } from './LevelDetailCard';
 import { RankCard } from './RankCard';
 import { PlaystyleCard } from './PlaystyleCard';
 import { KeyStatsCard } from './KeyStatsCard';
+import { WinLoseCard } from './WinLoseCard';
 import './summary.css';
 
 /**
@@ -47,6 +48,7 @@ export function SummaryPanel(): ReactElement {
             modes={scope.filter?.modes ?? null}
             numPlayers={scope.numPlayers}
           />
+          <WinLoseCard state={scope.stats} />
         </>
       )}
     </div>

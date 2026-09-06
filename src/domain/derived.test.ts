@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   averageScore,
   dealInBreakdown,
+  dealInStateBreakdown,
   lastPlaceRate,
   levelDistributionPosition,
   rentaiRate,
@@ -69,6 +70,37 @@ describe('derived: winBreakdown / dealInBreakdown', () => {
 
   it('dealInBreakdown: 合計0はnull', () => {
     expect(dealInBreakdown({ 放铳至立直: 0, 放铳至副露: 0, 放铳至默听: 0 })).toBe(null);
+  });
+});
+
+describe('derived: dealInStateBreakdown', () => {
+  it('放铳率 === 0 のとき null（issue-12 §4.2 の空判定）', () => {
+    expect(dealInStateBreakdown({ 放铳率: 0, 放铳时立直率: 0, 放铳时副露率: 0 })).toBe(null);
+  });
+
+  it('通常ケース: 立直/副露/門前の内訳を返す', () => {
+    const result = dealInStateBreakdown({ 放铳率: 0.1237, 放铳时立直率: 0.1538, 放铳时副露率: 0.4615 });
+    expect(result).toEqual({ 立直: 0.1538, 副露: 0.4615, 默听: 1 - 0.1538 - 0.4615 });
+  });
+
+  it('放铳率 > 0 かつ立直率0・副露率0 のとき門前100%になる（null ではない）', () => {
+    const result = dealInStateBreakdown({ 放铳率: 0.05, 放铳时立直率: 0, 放铳时副露率: 0 });
+    expect(result).not.toBe(null);
+    expect(result).toEqual({ 立直: 0, 副露: 0, 默听: 1 });
+  });
+
+  it('立直+副露が1を超える異常値は門前を0にクランプし、立直・副露を正規化する', () => {
+    const result = dealInStateBreakdown({ 放铳率: 0.1, 放铳时立直率: 0.6, 放铳时副露率: 0.6 });
+    expect(result).toEqual({ 立直: 0.5, 副露: 0.5, 默听: 0 });
+  });
+
+  it('非有限数（undefined由来のNaN）は null', () => {
+    const result = dealInStateBreakdown({
+      放铳率: 0.1,
+      放铳时立直率: undefined as unknown as number,
+      放铳时副露率: 0.4615,
+    });
+    expect(result).toBe(null);
   });
 });
 

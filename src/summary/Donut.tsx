@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { DONUT_CIRCUMFERENCE, DONUT_RADIUS, DONUT_STROKE } from './rankView';
+import { DONUT_CIRCUMFERENCE, DONUT_RADIUS, DONUT_STROKE } from './donutShared';
 
 /**
  * 汎用ドーナツ部品。フックを使わない純粋な表示コンポーネント。
@@ -18,10 +18,11 @@ export interface DonutProps {
   readonly ariaLabel: string;
   readonly children?: ReactNode; // 中央の穴に置く内容
   readonly placeholder?: boolean; // true なら全周を surface-container-highest で1本描く（loading 用）
+  readonly testId?: string; // 既定 'rank-donut'（issue-9 の受け入れ条件を壊さないため。issue-12 §4.4）
 }
 
 export function Donut(props: DonutProps): ReactElement {
-  const { segments, ariaLabel, children, placeholder = false } = props;
+  const { segments, ariaLabel, children, placeholder = false, testId = 'rank-donut' } = props;
 
   return (
     <div className="donut">
@@ -30,7 +31,7 @@ export function Donut(props: DonutProps): ReactElement {
         viewBox="0 0 160 160"
         role="img"
         aria-label={ariaLabel}
-        data-testid="rank-donut"
+        data-testid={testId}
       >
         <circle
           className="donut__track"

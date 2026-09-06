@@ -904,3 +904,181 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/*
+ * カード5（和銃分布ドーナツ3枚）。issue-12 §4.5-4.6。
+ * 高さの規律（issue-8 §5.3 H1 と同じ）: loading / ready / error でカードの高さを一致させる。
+ * ドーナツが3枚とも同じ構造（タイトル・ドーナツ枠・凡例3行）で、個々のドーナツが空でも
+ * 凡例の行数を変えず値だけ「—」にすることで行数を固定する（§4.6）。
+ *
+ * @container を使う理由・ブレークポイント 600px は他カード（rank-card 等）と同一（§4.6）。
+ */
+.win-lose-card {
+  display: block;
+  box-sizing: border-box;
+}
+
+.win-lose-card__inner {
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+  container-name: win-lose-card;
+}
+
+.win-lose-card__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.win-lose-card__body {
+  position: relative;
+}
+
+.win-lose-card__body--message > .win-lose-card__donuts {
+  visibility: hidden;
+}
+
+.win-lose-card__message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--md-sys-color-error);
+  margin: 0;
+  padding: 0 8px;
+}
+
+/* 既定（狭い側）: 3枚を縦に積み、各枚は「ドーナツ左・凡例右」の横並び。§4.6 */
+.win-lose-card__donuts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.win-lose-card__item {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+}
+
+.win-lose-card__item-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.win-lose-card__item .donut {
+  max-width: 120px;
+}
+
+.win-lose-card__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+
+  /* rank-card__legend と同じ理由で1箇所に集約する（issue-9 §3.4 R1 の教訓） */
+  --legend-row-height: 24px;
+}
+
+.win-lose-card__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--legend-row-height);
+}
+
+.win-lose-card__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--swatch);
+  flex: 0 0 auto;
+}
+
+/* このドーナツだけデータが無いときのスウォッチ（色を持たないので枠線だけにする） */
+.win-lose-card__swatch--empty {
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  box-sizing: border-box;
+}
+
+.win-lose-card__legend-text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.win-lose-card__legend-label {
+  color: var(--md-sys-color-on-surface);
+}
+
+.win-lose-card__legend-value {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/*
+ * ドーナツ中央の穴（.donut__center が既に position:absolute; inset:0 で場所を確保済み）に
+ * 置く「データがありません」。凡例の後ろに別行として足すと凡例3行の高さ不変則（§4.6）が
+ * 壊れるため、行を増やさないここに置く（実測で発見。issue-12 §6-26 是正）。
+ */
+.win-lose-card__empty {
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.win-lose-card__skeleton {
+  display: block;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+}
+
+.win-lose-card__item-title .win-lose-card__skeleton {
+  width: 96px;
+  height: 20px;
+}
+
+.win-lose-card__legend-item .win-lose-card__skeleton:first-child {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.win-lose-card__legend-item .win-lose-card__skeleton:last-child {
+  width: 96px;
+  height: var(--legend-row-height);
+  flex: 1 1 auto;
+}
+
+/*
+ * 【配置上の注意】このブロックは `.win-lose-card__*` の基本ルールより**後ろ**に置くこと。
+ * 詳細度が同じなので、基本ルールが後ろにあると後勝ちでコンテナクエリが打ち消される
+ * （issue-9 で実際に起きた。issue-12 §4.6 も同じ注意を踏襲）。
+ */
+@container win-lose-card (min-width: 600px) {
+  .win-lose-card__donuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .win-lose-card__item {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .win-lose-card__item .donut {
+    max-width: 160px;
+  }
+}

@@ -100,3 +100,4 @@ export const RANK_COLOR_TONES: Record<'light' | 'dark', Record<RankColorKey, num
  */
 export const DELTA_GOOD_SOURCE = '#2E7D32';
 export const DELTA_GOOD_TONES: Record<'light' | 'dark', number> = { light: 40, dark: 80 };
+
