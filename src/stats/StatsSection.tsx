@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { ElevatedCard, Icon, List, ListItem } from '../components/md';
 import type { StatSectionView } from './statsView';
 
@@ -13,6 +13,19 @@ const DIST_GROUPS = [
 ] as const;
 
 export function StatsSection({ section }: StatsSectionProps): ReactElement {
+  const [openTipKey, setOpenTipKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openTipKey === null) return;
+    const handleOutsideClick = () => {
+      setOpenTipKey(null);
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [openTipKey]);
+
   return (
     <ElevatedCard className="stats-section-card" data-section={section.id}>
       <section className="stats-section">
@@ -93,6 +106,7 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
           <List className="stats-section__list">
             {section.rows.map((r) => {
               const hasNote = r.note.length > 0;
+              const isTipOpen = openTipKey === r.key;
               const tipId = `tip-${section.id}-${r.key}`;
               return (
                 <div
@@ -100,6 +114,7 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                   key={r.key}
                   data-row={r.key}
                   data-has-note={hasNote ? 'true' : 'false'}
+                  data-tip-open={isTipOpen ? 'true' : 'false'}
                 >
                   <ListItem>
                     <span slot="headline" className="stats-row__headline">
@@ -110,6 +125,11 @@ export function StatsSection({ section }: StatsSectionProps): ReactElement {
                           className="stats-row__info-btn"
                           aria-label={`${r.label}の注記`}
                           aria-describedby={tipId}
+                          aria-expanded={isTipOpen}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenTipKey((prev) => (prev === r.key ? null : r.key));
+                          }}
                         >
                           <Icon className="stats-row__info-icon">info</Icon>
                         </button>

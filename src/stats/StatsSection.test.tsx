@@ -121,16 +121,17 @@ describe('StatsSection & DOM structure', () => {
         const hasNote = row.note.length > 0;
         const tipId = `tip-${section.id}-${row.key}`;
 
-        // data-row と data-has-note の確認
+        // data-row と data-has-note と data-tip-open の確認
         expect(html).toContain(`data-row="${row.key}"`);
         expect(html).toContain(
-          `data-row="${row.key}" data-has-note="${hasNote ? 'true' : 'false'}"`,
+          `data-row="${row.key}" data-has-note="${hasNote ? 'true' : 'false'}" data-tip-open="false"`,
         );
 
         if (hasNote) {
-          // info ボタンが存在し、aria-describedby が付与されている
+          // info ボタンが存在し、aria-describedby と aria-expanded="false" が付与されている
           expect(html).toContain('stats-row__info-btn');
           expect(html).toContain(`aria-describedby="${tipId}"`);
+          expect(html).toContain('aria-expanded="false"');
           expect(html).toContain('stats-row__info-icon');
           // tip 要素が存在し、role="tooltip" と id が付与されている
           expect(html).toContain(`id="${tipId}"`);

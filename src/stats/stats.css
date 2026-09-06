@@ -173,7 +173,7 @@
   background: transparent;
   border: none;
   padding: 0;
-  cursor: pointer;
+  cursor: help; /* PC: ホバー時のマウスカーソルは help */
   color: var(--md-sys-color-on-surface-variant);
   border-radius: 50%;
   outline-offset: 2px;
@@ -237,10 +237,10 @@
   transition: opacity 120ms ease;
 }
 
-/* 修正3: info アイコンボタンに hover または focus したときだけ表示 */
+/* info アイコンボタンに hover (PC) または focus-visible (キーボード) したとき、あるいはタップで開いたとき (タッチ端末) 表示 */
 .stats-row:has(.stats-row__info-btn:hover) .stats-row__tip,
-.stats-row:has(.stats-row__info-btn:focus) .stats-row__tip,
-.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip {
+.stats-row:has(.stats-row__info-btn:focus-visible) .stats-row__tip,
+.stats-row[data-tip-open="true"] .stats-row__tip {
   opacity: 1;
   visibility: visible;
 }

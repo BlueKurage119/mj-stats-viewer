@@ -723,7 +723,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 > **2026-09-07 UI調整で上書き**:
 > 1. **カード化**: 各セクションを `ElevatedCard` (`src/components/md`) で包み、9セクション = 9枚のカードが縦に並ぶ構成とする。
 > 2. **表形式化**: `rank`（順位分布）および `distribution`（和銃分布）は `List` ではなく表形式（`table`）で描画する。表内に回数・割合（順位分布は平均点数も）が揃うため、この2セクションのツールチップ（注記）は不要（削除）。
-> 3. **ツールチップのトリガー限定**: リスト形式の残り7セクションにおいて、ラベル全体での hover/focus は廃止し、注記がある行のみラベル横に Material Icon `info`（`src/components/md` の `Icon` コンポーネント）ボタンを配置して、そのアイコンの hover/focus でのみツールチップを表示する。
+> 3. **ツールチップのトリガー限定**: リスト形式の残り7セクションにおいて、ラベル全体での hover/focus は廃止し、注記がある行のみラベル横に Material Icon `info`（`src/components/md` の `Icon` コンポーネント）ボタンを配置する。PC では hover（マウスカーソル `help`）または focus-visible で表示し、タッチ端末ではタップ（クリック）で表示・非表示をトグルする（`data-tip-open="true"` / `aria-expanded`）。外側タップで閉じる。
 > 4. **値の文字サイズ拡大**: リスト行の値および表の回数・割合・平均点数セルを `title-medium`（16px, 500）相当とし、ラベル（`body-medium`）より大きく表示する。
 
 ```tsx
@@ -801,7 +801,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 > - 表形式セクション（`.stats-table`）のレイアウト・ボーダー・パディングを設定。
 > - 和銃分布テーブル（`.stats-table--dist`）: 放銃時「約」による列幅のズレを防ぎ3つの表で縦の列を揃えるため、`table-layout: fixed` および列幅比率 2:1:1（50%:25%:25%）を設定。
 > - 値の文字サイズ: リスト行の値（`.stats-row__value`）および表の数値セル（`.stats-table__cell--value`）を `var(--md-sys-typescale-title-medium-size)`（16px）かつ太字 `500` に拡大し、ラベル（`body-medium`: 14px）より大きく表示。
-> - ツールチップトリガーの限定: ラベルの点線下線・`cursor: help` を撤去し、`.stats-row__info-btn`（Material Icon `info`）を配置。ツールチップは `.stats-row:has(.stats-row__info-btn:hover)` および `.stats-row:has(.stats-row__info-btn:focus-visible)` でのみ表示する。
+> - ツールチップトリガーの限定: ラベルの点線下線を撤去し、`.stats-row__info-btn`（Material Icon `info`）を配置。ホバー時のマウスカーソルは `help` とする。PC では hover / focus-visible で表示し、タッチ端末ではタップで表示・非表示をトグルする（`.stats-row[data-tip-open="true"]`）。外側タップで閉じる。
 
 色は必ず `--md-sys-color-*` を使う。ハードコード禁止（CLAUDE.md §5）。`md-list-item` の既定値の上書きが**必須**（§1.3）:
 
@@ -998,7 +998,7 @@ export function buildGrowthView(input: GrowthInput): GrowthView;
 
 > [!NOTE]
 > **2026-09-07 UI調整で上書き**:
-> - **トリガーを info アイコンに限定**: A2-4, A2-5, A2-6 のフォーカス/hover 対象はラベル全体ではなく、注記がある行にのみ配置される `.stats-row__info-btn`（Material Icon `info`）に変更。ラベルの点線下線やフォーカス受け取りは廃止。
+> - **トリガーを info アイコンに限定**: A2-4, A2-5, A2-6 のフォーカス/hover 対象はラベル全体ではなく、注記がある行にのみ配置される `.stats-row__info-btn`（Material Icon `info`）に変更。ホバー時のマウスカーソルは `help` とする。PC では hover / focus-visible で表示し、タッチ端末ではタップ（クリック）で表示・非表示をトグルする（`data-tip-open="true"` / `aria-expanded`）。外側タップで閉じる。
 > - **表形式2セクションの注記削除**: `rank`（順位分布）および `distribution`（和銃分布）は表形式化により情報がセルに揃うため、注記（ツールチップ）は対象外（`note = ''`）とし、info アイコンおよび吹き出し要素は生成しない。ツールチップが有効なのは残り7セクションのみとなる。
 
 - [ ] **A2-1** 単体テスト: `STAT_SECTIONS` の全行（導出行・成長指標行を含む）の `note` が
