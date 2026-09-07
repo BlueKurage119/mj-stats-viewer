@@ -16,15 +16,63 @@
     grid-template-columns: repeat(2, 1fr);
     align-items: start;
     gap: 16px;
+    grid-template-areas:
+      "count        count"
+      "rank         rank"
+      "overall1     overall2"
+      "efficiency   growth"
+      "efficiency   call"
+      "riichi       riichi"
+      "distribution distribution"
+      "luck         luck";
   }
 
   .stats-panel__count {
-    grid-column: 1 / -1;
+    grid-area: count;
   }
 
-  .stats-panel > [data-section="riichi"],
+  .stats-panel > [data-section="rank"] {
+    grid-area: rank;
+  }
+
+  .stats-panel > [data-section="overall1"] {
+    grid-area: overall1;
+  }
+
+  .stats-panel > [data-section="overall2"] {
+    grid-area: overall2;
+  }
+
+  .stats-panel > [data-section="efficiency"] {
+    grid-area: efficiency;
+  }
+
+  .stats-panel > [data-section="growth"] {
+    grid-area: growth;
+  }
+
+  .stats-panel > [data-section="call"] {
+    grid-area: call;
+  }
+
+  .stats-panel > [data-section="riichi"] {
+    grid-area: riichi;
+  }
+
+  .stats-panel > [data-section="distribution"] {
+    grid-area: distribution;
+  }
+
   .stats-panel > [data-section="luck"] {
-    grid-row: span 2;
+    grid-area: luck;
+  }
+
+  /* 立直統計・幸運度はカード内部のリストを2列表示 */
+  .stats-panel > [data-section="riichi"] .stats-section__list,
+  .stats-panel > [data-section="luck"] .stats-section__list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 24px;
   }
 }
 
