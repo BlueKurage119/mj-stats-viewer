@@ -9,6 +9,25 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* タブレット・PC向け 2カラムグリッドレイアウト（840px以上） */
+@media (min-width: 840px) {
+  .stats-panel {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  .stats-panel__count {
+    grid-column: 1 / -1;
+  }
+
+  .stats-panel > [data-section="riichi"],
+  .stats-panel > [data-section="luck"] {
+    grid-row: span 2;
+  }
+}
+
 .stats-section-card {
   display: block;
 }

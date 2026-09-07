@@ -81,7 +81,7 @@ export function StatsGallery(): ReactElement {
       : '—';
 
   return (
-    <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1040px', margin: '0 auto' }}>
       <header style={{ marginBottom: '24px' }}>
         <h1 className="md-typescale-headline-medium">Stats Gallery (#/__stats)</h1>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
