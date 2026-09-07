@@ -21,8 +21,8 @@
       "rank         rank"
       "overall1     overall2"
       "efficiency   growth"
-      "efficiency   call"
       "riichi       riichi"
+      "call         call"
       "distribution distribution"
       "luck         luck";
   }
@@ -67,8 +67,9 @@
     grid-area: luck;
   }
 
-  /* 立直統計・幸運度はカード内部のリストを2列表示 */
+  /* 立直統計・副露統計・幸運度はカード内部のリストを2列表示 */
   .stats-panel > [data-section="riichi"] .stats-section__list,
+  .stats-panel > [data-section="call"] .stats-section__list,
   .stats-panel > [data-section="luck"] .stats-section__list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
