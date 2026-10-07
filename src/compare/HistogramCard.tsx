@@ -16,6 +16,8 @@ export interface HistogramCardProps {
   readonly histogram: HistogramData | null; // band 0 の histogramFull
   readonly tableMean: number | null; // 卓平均（band 0 の mean）
   readonly levelMean: number | null; // 段位平均（段位帯 band の mean）
+  readonly valueLoading?: boolean;
+  readonly distributionLoading?: boolean;
   readonly loading?: boolean;
 }
 
@@ -28,35 +30,38 @@ export interface HistogramCardProps {
 export function HistogramCard(props: HistogramCardProps): ReactElement {
   const { metric, value, histogram, tableMean, levelMean, loading = false } = props;
 
+  const valueLoading = props.valueLoading ?? loading;
+  const distributionLoading = props.distributionLoading ?? loading;
+  const displayValue = valueLoading ? null : value;
   let state: 'loading' | 'ready' | 'nodist' = 'ready';
-  if (loading) {
+  if (valueLoading || distributionLoading) {
     state = 'loading';
   } else if (!histogram) {
     state = 'nodist';
   }
 
   // クロップとパーセンタイル計算
-  const marks = [value, tableMean, levelMean];
+  const marks = [displayValue, tableMean, levelMean];
   const window = histogram ? cropHistogram(histogram, marks) : null;
 
   // 上位% の計算（必ず全域の histogramFull で percentile() を呼ぶ: A1-2, A3-2）
   let topPercent = null;
-  if (histogram && value !== null && Number.isFinite(value)) {
-    const p = percentile(value, histogram);
+  if (!distributionLoading && histogram && displayValue !== null && Number.isFinite(displayValue)) {
+    const p = percentile(displayValue, histogram);
     topPercent = toTopPercent(p, metric.direction);
   }
 
   // レンジ外判定
   const isClamped =
     histogram &&
-    value !== null &&
-    Number.isFinite(value) &&
-    (value < histogram.min || value > histogram.max);
+    displayValue !== null &&
+    Number.isFinite(displayValue) &&
+    (displayValue! < histogram.min || displayValue! > histogram.max);
 
   // aria-label の生成
   const ariaParts = [`${metric.label}の分布`];
-  if (value !== null) {
-    ariaParts.push(`自分 ${formatMetricValue(value, metric.unit)}`);
+  if (displayValue !== null) {
+    ariaParts.push(`自分 ${formatMetricValue(displayValue, metric.unit)}`);
   }
   if (tableMean !== null) {
     ariaParts.push(`卓平均 ${formatMetricValue(tableMean, metric.unit)}`);
@@ -77,7 +82,7 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
       className="histogram-card"
       data-testid="histogram-card"
       data-metric={metric.key}
-      data-state={state}
+      data-state={state} aria-busy={valueLoading || distributionLoading}
     >
       <div className="histogram-card__header">
         <div className="histogram-card__title-group">
@@ -88,7 +93,7 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
             </span>
           ) : null}
         </div>
-        {!loading && topPercent ? (
+        {!valueLoading && !distributionLoading && topPercent ? (
           <span
             className="top-percent-chip md-typescale-label-medium"
             data-testid="top-percent"
@@ -100,7 +105,7 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
       </div>
 
       <div className="histogram-card__value-row">
-        {loading ? (
+        {valueLoading ? (
           <>
             <div className="histogram-card__skeleton" style={{ width: '80px', height: '28px' }} />
             <div className="histogram-card__skeleton" style={{ width: '100px', height: '14px' }} />
@@ -108,9 +113,9 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
         ) : (
           <>
             <span className="histogram-card__value md-typescale-headline-medium">
-              {formatMetricValue(value, metric.unit)}
+              {formatMetricValue(displayValue, metric.unit)}
             </span>
-            {meanNoteText ? (
+            {distributionLoading ? <span className="feedback-skeleton" aria-hidden="true" /> : meanNoteText ? (
               <span className="histogram-card__mean-note md-typescale-label-small">
                 {meanNoteText}
               </span>
@@ -120,7 +125,7 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
       </div>
 
       <div className="histogram-card__graph-area">
-        {loading ? (
+        {distributionLoading ? (
           <div className="histogram-card__skeleton" />
         ) : !histogram || !window ? (
           <div className="histogram-card__nodist md-typescale-body-small">
@@ -130,7 +135,7 @@ export function HistogramCard(props: HistogramCardProps): ReactElement {
           <Histogram
             histogram={histogram}
             window={window}
-            selfValue={value}
+            selfValue={displayValue}
             tableMean={tableMean}
             levelMean={levelMean}
             ariaLabel={ariaLabel}

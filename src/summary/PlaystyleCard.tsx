@@ -67,16 +67,23 @@ function TendencyRowView({ row }: { row: TendencyRow }): ReactElement {
 export function PlaystyleCard(props: PlaystyleCardProps): ReactElement {
   const { state, distribution, modes, numPlayers } = props;
 
-  const isLoading = state.kind === 'loading' || distribution.kind === 'loading' || modes === null;
+  const ext = state.kind === 'ready' ? state.extendedState : null;
+  const terminalMessage = state.kind === 'empty' ? 'この期間の対局はありません'
+    : state.kind === 'error' ? state.message
+    : ext?.kind === 'error' ? ext.issue.message
+    : distribution.kind === 'error' ? distribution.message
+    : ext?.kind === 'empty' ? 'この期間の詳細スタッツはありません' : null;
+  const isLoading = terminalMessage === null && (state.kind === 'loading' || ext?.kind === 'loading' || distribution.kind === 'loading' || modes === null);
 
-  let message: string | null = null;
+  let message: string | null = terminalMessage;
   let points: readonly RadarPoint[] = LOADING_RADAR_POINTS;
   let polygonPoints: string | null = null;
   let radarAriaLabel = '打ち筋レーダー 読み込み中';
   let rows: readonly TendencyRow[] = LOADING_TENDENCY_ROWS;
   let modeNote = '';
+  let insufficient = false;
 
-  if (!isLoading) {
+  if (!isLoading && !terminalMessage) {
     if (state.kind === 'error') {
       message = state.message;
     } else if (distribution.kind === 'error') {
@@ -85,11 +92,12 @@ export function PlaystyleCard(props: PlaystyleCardProps): ReactElement {
       if (state.extended === null) {
         message = '打ち筋データを取得できません';
       } else {
-        const mode = selectRepresentativeMode(numPlayers, modes);
-        const lookup = distribution.lookupFor(mode);
+        const mode = selectRepresentativeMode(numPlayers, modes!);
+        const lookup = distribution.kind === 'ready' ? distribution.lookupFor(mode) : () => null;
         const view = buildPlaystyleView({ extended: state.extended, lookup, mode });
         if (view.allAxesMissing) {
           message = 'この卓の分布データが揃っていません';
+          insufficient = true;
         } else {
           points = view.points;
           polygonPoints = view.polygonPoints;
@@ -105,21 +113,21 @@ export function PlaystyleCard(props: PlaystyleCardProps): ReactElement {
     }
   }
 
-  const cardState: 'loading' | 'ready' | 'error' = isLoading ? 'loading' : message !== null ? 'error' : 'ready';
+  const cardState = isLoading ? 'loading' : message ? (insufficient || state.kind === 'empty' || ext?.kind === 'empty' ? 'empty' : 'error') : 'ready';
 
   return (
-    <ElevatedCard className="playstyle-card" data-testid="playstyle-card" data-state={cardState}>
+    <ElevatedCard className="playstyle-card" data-testid="playstyle-card" data-state={cardState} aria-busy={isLoading}>
       <div className="playstyle-card__inner">
         <h2 className="playstyle-card__title md-typescale-title-medium">打ち筋</h2>
 
         <div className={`playstyle-card__body${message !== null ? ' playstyle-card__body--message' : ''}`}>
           <div className="playstyle-card__radar">
-            <Radar points={points} polygonPoints={polygonPoints} ariaLabel={radarAriaLabel} placeholder={isLoading} />
+            <Radar points={points} polygonPoints={polygonPoints} ariaLabel={message ? '打ち筋レーダー データ未表示' : radarAriaLabel} placeholder={isLoading} />
           </div>
 
           <div className="playstyle-card__tendency">
             {rows.map((row) => (
-              <TendencyRowView key={row.key} row={row} />
+              <TendencyRowView key={row.key} row={message ? {...row, ariaLabel: 'データ未表示'} : row} />
             ))}
           </div>
 

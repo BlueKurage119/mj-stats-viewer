@@ -96,23 +96,20 @@ function DonutItem({ donut, isLoading }: { donut: WinLoseDonut | null; isLoading
 export function WinLoseCard(props: WinLoseCardProps): ReactElement {
   const { state } = props;
 
-  const isLoading = state.kind === 'loading';
+  const ext = state.kind === 'ready' ? state.extendedState : null;
+  const isLoading = state.kind === 'loading' || ext?.kind === 'loading';
   const view =
     state.kind === 'ready' && state.extended !== null ? buildWinLoseView(state.extended) : null;
 
-  const message =
-    state.kind === 'error'
-      ? state.message
-      : state.kind === 'ready' && state.extended === null
-        ? '和銃分布を表示できません'
-        : null;
-
-  const cardState: 'loading' | 'ready' | 'error' = isLoading ? 'loading' : message !== null ? 'error' : 'ready';
+  const message = state.kind === 'error' ? state.message : ext?.kind === 'error' ? ext.issue.message
+    : state.kind === 'empty' ? 'この期間の対局はありません'
+    : ext?.kind === 'empty' ? 'この期間の詳細スタッツはありません' : null;
+  const cardState = isLoading ? 'loading' : message ? (state.kind === 'empty' || ext?.kind === 'empty' ? 'empty' : 'error') : 'ready';
 
   const donutItems: readonly (WinLoseDonut | null)[] = view !== null ? view.donuts : Array(3).fill(null);
 
   return (
-    <ElevatedCard className="win-lose-card" data-testid="win-lose-card" data-state={cardState}>
+    <ElevatedCard className="win-lose-card" data-testid="win-lose-card" data-state={cardState} aria-busy={isLoading}>
       <div className="win-lose-card__inner">
         <h2 className="win-lose-card__title md-typescale-title-medium">和銃分布</h2>
 

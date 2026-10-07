@@ -1,3 +1,4 @@
+import { ResourceFeedback } from '../feedback/RequestFeedback';
 import type { ReactElement } from 'react';
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -25,7 +26,7 @@ const NP_TOGGLE_OPTIONS: readonly { numPlayers: NumPlayers; label: string }[] = 
 
 export function SearchPage(): ReactElement {
   const [numPlayers, setNumPlayers] = useState<NumPlayers>(4);
-  const { query, setQuery, state, retry } = useSearch(numPlayers);
+  const { query, setQuery, state, retry, retryingIssue } = useSearch(numPlayers);
 
   const resultRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
@@ -76,9 +77,9 @@ export function SearchPage(): ReactElement {
     statusContent = '検索中…';
     resultsList = (
       <ul className="search-results" data-testid="search-results">
-        <li className="search-skeleton" data-testid="search-skeleton" />
-        <li className="search-skeleton" data-testid="search-skeleton" />
-        <li className="search-skeleton" data-testid="search-skeleton" />
+        <li aria-hidden="true" className="search-skeleton" data-testid="search-skeleton" />
+        <li aria-hidden="true" className="search-skeleton" data-testid="search-skeleton" />
+        <li aria-hidden="true" className="search-skeleton" data-testid="search-skeleton" />
       </ul>
     );
   } else if (state.kind === 'results') {
@@ -129,19 +130,7 @@ export function SearchPage(): ReactElement {
       );
     }
   } else if (state.kind === 'error') {
-    statusContent = (
-      <>
-        <span>{state.message}</span>
-        <button
-          type="button"
-          className="search-retry-button md-typescale-label-large"
-          data-testid="search-retry"
-          onClick={retry}
-        >
-          再試行
-        </button>
-      </>
-    );
+    statusContent = null;
   }
 
   return (
@@ -165,6 +154,8 @@ export function SearchPage(): ReactElement {
       </header>
 
       <main className="search-main">
+<ResourceFeedback source="検索結果" issue={state.kind === 'error' ? state.issue : null} retryingIssue={retryingIssue} onRetry={retry} loading={state.kind === 'loading'} statusMessage={state.kind === 'idle' ? 'ニックネームを入力してください' : state.kind === 'results' ? state.items.length === 0 ? '該当するプレイヤーが見つかりませんでした' : `${state.items.length}件` : undefined} />
+
         <OutlinedTextField
           type="search"
           label="ニックネーム"
@@ -177,7 +168,6 @@ export function SearchPage(): ReactElement {
 
         <div
           className="search-status md-typescale-body-medium"
-          aria-live="polite"
           data-testid="search-status"
         >
           {statusContent}

@@ -1,13 +1,12 @@
+import { StatsFeedback } from '../feedback/StatsFeedback';
 import { useEffect, useState, type ReactElement } from 'react';
 import { usePlayerScope } from '../filters/playerScope';
-import { NO_GAMES_IN_PERIOD_MESSAGE } from '../filters/filterState';
 import { preferredMode } from '../domain';
 import { effectiveLevelPoint } from '../summary/identityView';
 import { buildGrowthView } from './growthView';
 import { buildStatsView } from './statsView';
 import { StatsSection } from './StatsSection';
-import { STAT_SECTIONS } from './statsMetrics';
-import { List, ListItem } from '../components/md';
+import type { PlayerStats } from '../api';
 import './stats.css';
 
 export function StatsPanel(): ReactElement {
@@ -31,57 +30,20 @@ export function StatsPanel(): ReactElement {
   }, [openTipId]);
 
   if (stats.kind === 'loading') {
-    const defaultSectionRowCounts: Record<string, number> = {
-      rank: numPlayers === 4 ? 4 : 3,
-      overall1: 7,
-      overall2: 8,
-      efficiency: 6,
-      growth: 5,
-      riichi: 16,
-      call: 3,
-      distribution: 9,
-      luck: 12,
-    };
-
-    return (
-      <div className="stats-panel">
-        {STAT_SECTIONS.map((s) => {
-          const count = defaultSectionRowCounts[s.id] ?? 0;
-          return (
-            <section key={s.id} className="stats-section" data-section={s.id}>
-              <h2 className="stats-section__title md-typescale-title-small">{s.title}</h2>
-              <List className="stats-section__list">
-                {Array.from({ length: count }).map((_, i) => (
-                  <div className="stats-row" key={i} data-has-note="false">
-                    <ListItem>
-                      <span slot="headline" className="stats-row__skeleton-label" />
-                      <span slot="trailing-supporting-text" className="stats-row__skeleton-value" />
-                    </ListItem>
-                  </div>
-                ))}
-              </List>
-            </section>
-          );
-        })}
-      </div>
-    );
+    // Build the same tables/lists as ready. Placeholder values never reach the UI.
+    const level = {id: numPlayers === 4 ? 10301 : 20301, score: 0, delta: 0};
+    const placeholder: PlayerStats = {id: scope.playerId, nickname: '', gameCount: 0, level, max_level: level,
+      rank_rates: Array(numPlayers).fill(0), rank_avg_score: Array(numPlayers).fill(0), avg_rank: 0, negative_rate: 0, played_modes: []};
+    const growthPlaceholder = buildGrowthView({level: {id: 0, score: 0, delta: 0}, rankRates: [], rankAvgScores: [], numPlayers, selectedModeCount: 0, selectedModes: [], maxLevel: null});
+    const sections = buildStatsView({stats: placeholder, extended: null, growth: growthPlaceholder, baseMode: null, numPlayers});
+    return <div className="stats-panel">
+      <StatsFeedback state={stats} retryingIssues={scope.statsRetryingIssues} onRetry={scope.retryStats} />
+      <p className="stats-panel__count md-typescale-body-small"><span className="feedback-skeleton" aria-hidden="true" />戦 / <span className="feedback-skeleton" aria-hidden="true" />局</p>
+      {sections.map(section => <StatsSection key={section.id} section={section} loadingRows={new Set(section.rows.map(row => row.key))} />)}
+    </div>;
   }
 
-  if (stats.kind === 'empty') {
-    return (
-      <div className="stats-panel">
-        <p className="md-typescale-body-medium">{NO_GAMES_IN_PERIOD_MESSAGE}</p>
-      </div>
-    );
-  }
-
-  if (stats.kind === 'error') {
-    return (
-      <div className="stats-panel">
-        <p className="md-typescale-body-medium">{stats.message}</p>
-      </div>
-    );
-  }
+  if (stats.kind === 'empty' || stats.kind === 'error') return <div className="stats-panel"><StatsFeedback state={stats} retryingIssues={scope.statsRetryingIssues} onRetry={scope.retryStats} /></div>;
 
   // stats.kind === 'ready'
   let eff = null;
@@ -104,6 +66,9 @@ export function StatsPanel(): ReactElement {
   }
 
   const baseMode = eff ? preferredMode(eff.levelId) : null;
+  if (!growth) {
+    growth = buildGrowthView({level: {id: 0, score: 0, delta: 0}, rankRates: [], rankAvgScores: [], numPlayers, selectedModeCount: 0, selectedModes: [], maxLevel: stats.stats.max_level});
+  }
   const sections = buildStatsView({
     stats: stats.stats,
     extended: stats.extended,
@@ -121,14 +86,16 @@ export function StatsPanel(): ReactElement {
 
   return (
     <div className="stats-panel">
+      <StatsFeedback state={stats} retryingIssues={scope.statsRetryingIssues} onRetry={scope.retryStats} />
       <p className="stats-panel__count md-typescale-body-small">
-        {gameCountText}戦 / {roundCountText}局
+        {gameCountText}戦 / {stats.extendedState.kind === 'loading' ? <span className="feedback-skeleton" aria-hidden="true" /> : roundCountText}局
       </p>
 
       {sections.map((section) => (
         <StatsSection
           key={section.id}
           section={section}
+          loadingRows={new Set(section.rows.filter(row => section.id === 'growth' ? identity.kind === 'loading' : (row.key === 'roundBalance' && identity.kind === 'loading') || stats.extendedState.kind === 'loading' && (section.id === 'overall1' ? row.key === 'roundCount' : section.id !== 'rank')).map(row => row.key))}
           openTipId={openTipId}
           onToggleTip={setOpenTipId}
         />

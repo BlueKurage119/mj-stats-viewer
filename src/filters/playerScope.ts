@@ -1,3 +1,5 @@
+import type { RequestIssue } from '../feedback/requestIssue';
+import type { StatsRetryTarget } from './useFilteredStats';
 import { useOutletContext } from 'react-router-dom';
 import type { GameMode, NumPlayers, PeriodPreset } from '../api';
 import type { GlobalFilter } from './filterState';
@@ -12,6 +14,12 @@ export interface PlayerScope {
   readonly filter: GlobalFilter | null;
   readonly stats: FilteredStatsState;
   readonly distribution: DistributionState;
+  readonly retryIdentity: () => void;
+  readonly retryStats: (target?: StatsRetryTarget) => void;
+  readonly retryDistribution: () => void;
+  readonly identityRetryingIssue: RequestIssue | null;
+  readonly statsRetryingIssues: Readonly<Partial<Record<'stats' | 'extended', RequestIssue>>>;
+  readonly distributionRetryingIssue: RequestIssue | null;
   readonly setModes: (next: readonly GameMode[]) => void;
   readonly setPeriod: (next: PeriodPreset) => void;
 }

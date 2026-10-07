@@ -86,7 +86,7 @@ export function RankCard(props: RankCardProps): ReactElement {
   const tileItems: readonly (RankTile | null)[] = view !== null ? view.tiles : Array(5).fill(null);
 
   return (
-    <ElevatedCard className="rank-card" data-testid="rank-card" data-state={state.kind}>
+    <ElevatedCard className="rank-card" data-testid="rank-card" data-state={message ? 'error' : state.kind} aria-busy={state.kind === 'loading'}>
       <div className="rank-card__inner">
         <h2 className="rank-card__title md-typescale-title-medium">成績</h2>
 
@@ -109,11 +109,9 @@ export function RankCard(props: RankCardProps): ReactElement {
                     {view.gameCountText}
                   </span>
                   <span className="rank-card__games-unit md-typescale-label-small">戦</span>
-                  {view.roundCountText !== null && (
-                    <span className="rank-card__rounds md-typescale-label-small numeric" data-testid="rank-rounds">
-                      {view.roundCountText}局
-                    </span>
-                  )}
+                  <span className="rank-card__rounds md-typescale-label-small numeric" data-testid="rank-rounds">
+                    {state.kind === 'ready' && state.extendedState.kind === 'loading' ? <span className="feedback-skeleton" aria-hidden="true" /> : `${view.roundCountText ?? '—'}局`}
+                  </span>
                 </div>
               ) : (
                 <Skeleton />

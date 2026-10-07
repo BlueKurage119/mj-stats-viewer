@@ -43,16 +43,16 @@ interface GalleryEntry {
 
 const LOADING_4P: FilteredStatsState = { kind: 'loading' };
 const LOADING_3P: FilteredStatsState = { kind: 'loading' };
-const ERROR_STATE: FilteredStatsState = {
+const ERROR_STATE: FilteredStatsState = { issue: {kind: 'unknown', message: 'ネットワークに接続できませんでした。'},
   kind: 'error',
   message: 'ネットワークに接続できませんでした。',
 };
-const READY_4P: FilteredStatsState = {
+const READY_4P: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(194)},
   kind: 'ready',
   stats: makeStats(),
   extended: makeExtended(194),
 };
-const READY_3P: FilteredStatsState = {
+const READY_3P: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(500)},
   kind: 'ready',
   stats: makeStats({
     id: 2,
@@ -68,8 +68,8 @@ const READY_3P: FilteredStatsState = {
   }),
   extended: makeExtended(500),
 };
-const READY_NO_EXTENDED: FilteredStatsState = { kind: 'ready', stats: makeStats(), extended: null };
-const READY_ZERO_SLICES: FilteredStatsState = {
+const READY_NO_EXTENDED: FilteredStatsState = { extendedState: {kind: 'empty'}, kind: 'ready', stats: makeStats(), extended: null };
+const READY_ZERO_SLICES: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(20)},
   kind: 'ready',
   stats: makeStats({
     gameCount: 5,
@@ -78,7 +78,7 @@ const READY_ZERO_SLICES: FilteredStatsState = {
   }),
   extended: makeExtended(20),
 };
-const READY_TINY_RATES: FilteredStatsState = {
+const READY_TINY_RATES: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(200)},
   kind: 'ready',
   stats: makeStats({
     rank_rates: [0.997, 0.001, 0.001, 0.001],
@@ -86,12 +86,12 @@ const READY_TINY_RATES: FilteredStatsState = {
   }),
   extended: makeExtended(200),
 };
-const READY_LARGE_COUNTS: FilteredStatsState = {
+const READY_LARGE_COUNTS: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(56789)},
   kind: 'ready',
   stats: makeStats({ gameCount: 12345 }),
   extended: makeExtended(56789),
 };
-const READY_UNEXPECTED_SHAPE: FilteredStatsState = {
+const READY_UNEXPECTED_SHAPE: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended(100)},
   kind: 'ready',
   stats: makeStats({ rank_rates: [0.5, 0.5], rank_avg_score: [30000, 20000] }),
   extended: makeExtended(100),

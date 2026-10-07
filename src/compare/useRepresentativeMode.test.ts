@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import React from 'react';
+import { createHookHarness, flush } from '../testUtils/hookHarness';
 import type { GameMode, PlayerStats } from '../api';
 import * as api from '../api';
 import {
@@ -9,59 +9,6 @@ import {
   useRepresentativeMode,
 } from './useRepresentativeMode';
 import type { GlobalFilter } from '../filters/filterState';
-
-// Node 環境で React hook を実行するための軽量テストハーネス
-function createHookHarness() {
-  const hookStates: any[] = [];
-  let hookIndex = 0;
-  const cleanups: Array<(() => void) | void> = [];
-  const prevDeps: Array<any[] | undefined> = [];
-
-  const mockDispatcher = {
-    useState(initial: any) {
-      const idx = hookIndex++;
-      if (hookStates[idx] === undefined) {
-        hookStates[idx] = typeof initial === 'function' ? initial() : initial;
-      }
-      const setState = (next: any) => {
-        hookStates[idx] = typeof next === 'function' ? next(hookStates[idx]) : next;
-      };
-      return [hookStates[idx], setState];
-    },
-    useEffect(effect: () => (() => void) | void, deps?: any[]) {
-      const idx = hookIndex++;
-      const last = prevDeps[idx];
-      const changed =
-        !last || !deps || deps.length !== last.length || deps.some((d, i) => d !== last[i]);
-      if (changed) {
-        if (typeof cleanups[idx] === 'function') {
-          cleanups[idx]!();
-        }
-        cleanups[idx] = effect();
-        prevDeps[idx] = deps;
-      }
-    },
-  };
-
-  const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-  if (internals) {
-    internals.H = mockDispatcher;
-  }
-
-  return {
-    run<T>(hookFn: () => T): T {
-      hookIndex = 0;
-      return hookFn();
-    },
-    cleanup() {
-      for (const cleanup of cleanups) {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      }
-    },
-  };
-}
 
 describe('useRepresentativeMode', () => {
   beforeEach(() => {
@@ -147,7 +94,7 @@ describe('useRepresentativeMode', () => {
   });
 
   describe('hook execution & request count (A4-2)', () => {
-    it('makes 0 additional API requests when candidate count is 1 (A4-2)', () => {
+    it('makes 0 additional API requests when candidate count is 1 (A4-2)', async () => {
       const getPlayerStatsSpy = vi.spyOn(api, 'getPlayerStats');
       const resolveRangeSpy = vi.spyOn(api, 'resolveRange');
 
@@ -164,6 +111,7 @@ describe('useRepresentativeMode', () => {
           override: null,
         }),
       );
+      await flush();
       // setState 後の2回目レンダー
       const res = harness.run(() =>
         useRepresentativeMode({
@@ -175,7 +123,7 @@ describe('useRepresentativeMode', () => {
         }),
       );
 
-      expect(res).toEqual({
+      expect(res.state).toEqual({
         kind: 'ready',
         mode: 16,
         candidates: [16],
@@ -231,7 +179,7 @@ describe('useRepresentativeMode', () => {
       );
 
       expect(getPlayerStatsSpy).toHaveBeenCalledTimes(2);
-      expect(res).toEqual({
+      expect(res.state).toEqual({
         kind: 'ready',
         mode: 12,
         candidates: [16, 12],

@@ -1,6 +1,7 @@
+import { StatsFeedback } from '../feedback/StatsFeedback';
+import { ResourceFeedback } from '../feedback/RequestFeedback';
 import type { ReactElement } from 'react';
 import { usePlayerScope } from '../filters/playerScope';
-import { NO_GAMES_IN_PERIOD_MESSAGE } from '../filters/filterState';
 import { ElevatedCard } from '../components/md';
 import { LevelDetailCard } from './LevelDetailCard';
 import { RankCard } from './RankCard';
@@ -25,8 +26,10 @@ export function SummaryPanel(): ReactElement {
     <div className="summary-panel">
       <LevelDetailCard state={scope.identity} />
 
+      <StatsFeedback state={scope.stats} retryingIssues={scope.statsRetryingIssues} onRetry={scope.retryStats} />
+      {scope.stats.kind !== 'empty' && <ResourceFeedback source="卓全体の分布" issue={scope.distribution.kind === 'error' ? scope.distribution.issue : null} retryingIssue={scope.distributionRetryingIssue} onRetry={scope.retryDistribution} loading={scope.distribution.kind === 'loading'} />}
       {scope.stats.kind === 'empty' ? (
-        <p className="md-typescale-body-medium">{NO_GAMES_IN_PERIOD_MESSAGE}</p>
+        null
       ) : (
         <>
           <ElevatedCard className="summary-panel__rank-graph">

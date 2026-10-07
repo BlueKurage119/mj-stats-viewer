@@ -119,14 +119,14 @@ function distReadyWithMean(): DistributionState {
   return { kind: 'ready', histogram, lookupFor: () => () => null };
 }
 
-const READY_STATE: FilteredStatsState = { kind: 'ready', stats: makeStats(), extended: makeExtended() };
+const READY_STATE: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended()}, kind: 'ready', stats: makeStats(), extended: makeExtended() };
 const LOADING_STATE: FilteredStatsState = { kind: 'loading' };
-const ERROR_STATE: FilteredStatsState = { kind: 'error', message: 'ネットワークに接続できませんでした。' };
-const NULL_EXTENDED_STATE: FilteredStatsState = { kind: 'ready', stats: makeStats(), extended: null };
+const ERROR_STATE: FilteredStatsState = { issue: {kind: 'unknown', message: 'ネットワークに接続できませんでした。'}, kind: 'error', message: 'ネットワークに接続できませんでした。' };
+const NULL_EXTENDED_STATE: FilteredStatsState = { extendedState: {kind: 'empty'}, kind: 'ready', stats: makeStats(), extended: null };
 
 const READY_DISTRIBUTION: DistributionState = distReadyWithMean();
 const LOADING_DISTRIBUTION: DistributionState = { kind: 'loading' };
-const ERROR_DISTRIBUTION: DistributionState = { kind: 'error', message: '母集団データを取得できませんでした。' };
+const ERROR_DISTRIBUTION: DistributionState = { issue: {kind: 'unknown', message: '母集団データを取得できませんでした。'}, kind: 'error', message: '母集団データを取得できませんでした。' };
 
 const ENTRIES: {
   label: string;

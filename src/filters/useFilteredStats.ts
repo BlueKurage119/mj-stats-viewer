@@ -1,122 +1,84 @@
-import { useEffect, useRef, useState } from 'react';
-import type { NumPlayers, PlayerExtendedStats, PlayerStats } from '../api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { NumPlayers, PlayerExtendedStats, PlayerStats, ResolvedRange } from '../api';
 import { getPlayerExtendedStats, getPlayerStats, resolveRange } from '../api';
-import { createDebouncer, type Debouncer } from '../util/debounce';
-import { describeStatsError } from './filterErrors';
+import { useRetryResource } from '../feedback/useRetryResource';
+import type { RequestIssue, ResourceState } from '../feedback/requestIssue';
 import { serializeModes, type GlobalFilter } from './filterState';
 
+export type ExtendedStatsState = ResourceState<PlayerExtendedStats>;
 export type FilteredStatsState =
   | { kind: 'loading' }
-  | { kind: 'empty' } // player_stats が null（§2.8）
-  | { kind: 'ready'; stats: PlayerStats; extended: PlayerExtendedStats | null }
-  | { kind: 'error'; message: string };
+  | { kind: 'empty' }
+  | { kind: 'ready'; stats: PlayerStats; extended: PlayerExtendedStats | null; extendedState: ExtendedStatsState }
+  | { kind: 'error'; message: string; issue: RequestIssue };
+export type StatsRetryTarget = 'stats' | 'extended' | 'failed';
+export interface FilteredStatsResource {
+  readonly state: FilteredStatsState;
+  readonly retry: (target?: StatsRetryTarget) => void;
+  readonly retryingIssues: Readonly<Partial<Record<'stats' | 'extended', RequestIssue>>>;
+}
+const noStats = (data: PlayerStats | null) => data === null || data.gameCount === 0;
+const noExtended = (data: PlayerExtendedStats | null) => data === null;
 
 export function useFilteredStats(
-  numPlayers: NumPlayers,
-  playerId: number,
-  filter: GlobalFilter | null,
-  delayMs = 250,
-): FilteredStatsState {
-  const [state, setState] = useState<FilteredStatsState>({ kind: 'loading' });
-  const [debouncedFilter, setDebouncedFilter] = useState<GlobalFilter | null>(filter);
-
-  const filterKey = filter
-    ? `${numPlayers}|${playerId}|${serializeModes(filter.modes)}|${filter.period}`
-    : null;
-
-  const hasFiredRef = useRef<boolean>(false);
-  const debouncerRef = useRef<Debouncer<GlobalFilter> | null>(null);
-
+  numPlayers: NumPlayers, playerId: number, filter: GlobalFilter | null, delayMs = 250,
+): FilteredStatsResource {
+  const key = filter ? `${numPlayers}|${playerId}|${serializeModes(filter.modes)}|${filter.period}` : null;
+  const [settled, setSettled] = useState(key);
   useEffect(() => {
-    debouncerRef.current = createDebouncer(delayMs, (value) => {
-      setDebouncedFilter(value);
-    });
-    return () => {
-      debouncerRef.current?.cancel();
-    };
-  }, [delayMs]);
-
-  useEffect(() => {
-    if (filterKey === null || filter === null) {
-      // filter が null に戻る（numPlayers/playerId 切替で identity が再解決待ちになる等）のは
-      // 新しい「初回」の始まりなので、次に filter が揃ったときも即時発火させる
-      hasFiredRef.current = false;
-      debouncerRef.current?.cancel();
+    if (key === null || settled === null) {
       // oxlint-disable-next-line react/set-state-in-effect
-      setDebouncedFilter(null);
+      setSettled(key);
       return;
     }
-
-    if (!hasFiredRef.current) {
-      hasFiredRef.current = true;
-      debouncerRef.current?.cancel();
-      // oxlint-disable-next-line react/set-state-in-effect
-      setDebouncedFilter(filter);
-    } else {
-      debouncerRef.current?.schedule(filter);
-    }
-  }, [filterKey, filter]);
-
-  useEffect(() => {
-    if (debouncedFilter === null) {
-      // oxlint-disable-next-line react/set-state-in-effect
-      setState({ kind: 'loading' });
-      return;
-    }
-
-    let cancelled = false;
-    const controller = new AbortController();
-    // oxlint-disable-next-line react/set-state-in-effect
-    setState({ kind: 'loading' });
-
-    const fetchStats = async () => {
-      try {
-        const range = await resolveRange(
-          { kind: 'preset', preset: debouncedFilter.period },
-          numPlayers,
-          playerId,
-        );
-        if (cancelled) return;
-
-        const [stats, extended] = await Promise.all([
-          getPlayerStats(
-            numPlayers,
-            playerId,
-            range.start,
-            range.end,
-            debouncedFilter.modes,
-            controller.signal,
-          ),
-          getPlayerExtendedStats(
-            numPlayers,
-            playerId,
-            range.start,
-            range.end,
-            debouncedFilter.modes,
-            controller.signal,
-          ),
-        ]);
-        if (cancelled) return;
-
-        if (stats === null) {
-          setState({ kind: 'empty' });
-        } else {
-          setState({ kind: 'ready', stats, extended });
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setState({ kind: 'error', message: describeStatsError(err) });
-        }
+    if (key === settled) return;
+    const timer = setTimeout(() => setSettled(key), delayMs);
+    return () => clearTimeout(timer);
+  }, [key, settled, delayMs]);
+  // Invalidate old requests immediately; begin the new generation after debounce.
+  const requestKey = key === settled ? key : null;
+  const source = useMemo(() => {
+    if (!requestKey) return null;
+    const [np, id, modes, period] = requestKey.split('|');
+    let range: Promise<ResolvedRange> | null = null;
+    const getRange = () => {
+      if (!range) {
+        range = resolveRange({ kind: 'preset', preset: period as GlobalFilter['period'] }, Number(np) as NumPlayers, Number(id));
+        void range.catch(() => { range = null; });
       }
+      return range;
     };
-
-    void fetchStats();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [debouncedFilter, numPlayers, playerId]);
-
-  return state;
+    return { np: Number(np) as NumPlayers, id: Number(id), modes: modes.split('.').map(Number) as GlobalFilter['modes'], getRange };
+  }, [requestKey]);
+  const loadStats = useCallback(async () => {
+    if (!source) return null;
+    const range = await source.getRange();
+    return getPlayerStats(source.np, source.id, range.start, range.end, source.modes);
+  }, [source]);
+  const loadExtended = useCallback(async () => {
+    if (!source) return null;
+    const range = await source.getRange();
+    return getPlayerExtendedStats(source.np, source.id, range.start, range.end, source.modes);
+  }, [source]);
+  const basic = useRetryResource(requestKey, loadStats, noStats);
+  const detailed = useRetryResource(requestKey, loadExtended, noExtended);
+  const retryBasic = basic.retry;
+  const retryDetailed = detailed.retry;
+  const retry = useCallback((target: StatsRetryTarget = 'failed') => {
+    if (!requestKey) return;
+    if (target !== 'extended') retryBasic();
+    if (target !== 'stats') retryDetailed();
+  }, [requestKey, retryBasic, retryDetailed]);
+  let state: FilteredStatsState;
+  if (basic.state.kind === 'ready' && basic.state.data) {
+    const extendedState = detailed.state as ExtendedStatsState;
+    state = { kind: 'ready', stats: basic.state.data, extendedState,
+      extended: extendedState.kind === 'ready' ? extendedState.data : null };
+  } else if (basic.state.kind === 'error') state = basic.state;
+  else if (basic.state.kind === 'empty') state = { kind: 'empty' };
+  else state = { kind: 'loading' };
+  return { state, retry, retryingIssues: {
+    ...(basic.retryingIssue ? { stats: basic.retryingIssue } : {}),
+    ...(detailed.retryingIssue ? { extended: detailed.retryingIssue } : {}),
+  } };
 }

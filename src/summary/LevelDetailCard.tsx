@@ -63,6 +63,7 @@ function ConditionsBlock({ view }: { view: IdentityView }): ReactElement | null 
 
 export function LevelDetailCard(props: LevelDetailCardProps): ReactElement | null {
   const { state } = props;
+  if (state.kind === 'loading') return <ElevatedCard className="level-detail" data-testid="level-detail-card" aria-busy="true"><div className="level-detail__inner"><h2 className="level-detail__title md-typescale-title-medium">段位の詳細</h2><span className="feedback-skeleton" aria-hidden="true" /></div></ElevatedCard>;
   if (state.kind !== 'ready') return null;
 
   const view = buildIdentityView(state.identity);

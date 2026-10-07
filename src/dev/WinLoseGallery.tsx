@@ -97,16 +97,23 @@ function makeStats(): PlayerStats {
   };
 }
 
-const READY_STATE: FilteredStatsState = { kind: 'ready', stats: makeStats(), extended: makeExtended() };
+const READY_STATE: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended()}, kind: 'ready', stats: makeStats(), extended: makeExtended() };
 const LOADING_STATE: FilteredStatsState = { kind: 'loading' };
-const ERROR_STATE: FilteredStatsState = { kind: 'error', message: 'ネットワークに接続できませんでした。' };
-const NULL_EXTENDED_STATE: FilteredStatsState = { kind: 'ready', stats: makeStats(), extended: null };
-const NO_WIN_STATE: FilteredStatsState = {
+const ERROR_STATE: FilteredStatsState = { issue: {kind: 'unknown', message: 'ネットワークに接続できませんでした。'}, kind: 'error', message: 'ネットワークに接続できませんでした。' };
+const NULL_EXTENDED_STATE: FilteredStatsState = { extendedState: {kind: 'empty'}, kind: 'ready', stats: makeStats(), extended: null };
+const NO_WIN_STATE: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended({ 立直和了: 0, 副露和了: 0, 默听和了: 0 })},
   kind: 'ready',
   stats: makeStats(),
   extended: makeExtended({ 立直和了: 0, 副露和了: 0, 默听和了: 0 }),
 };
-const NO_DEALIN_STATE: FilteredStatsState = {
+const NO_DEALIN_STATE: FilteredStatsState = { extendedState: {kind: 'ready', data: makeExtended({
+    放铳率: 0,
+    放铳时立直率: 0,
+    放铳时副露率: 0,
+    放铳至立直: 0,
+    放铳至副露: 0,
+    放铳至默听: 0,
+  })},
   kind: 'ready',
   stats: makeStats(),
   extended: makeExtended({

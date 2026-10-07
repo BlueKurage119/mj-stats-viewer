@@ -25,7 +25,7 @@ export interface KeyStatsCardProps {
  * ラベルは KEY_STAT_METRICS 由来の固定表なので loading でも既に分かっている。
  * skeleton にするのは値・差分の2行だけ（§4.3「6タイル分の skeleton（値・差分の両方）」）。
  */
-function TileItem({ label, tile }: { label: string; tile: KeyStatTile | null }): ReactElement {
+function TileItem({ label, tile, deltaLoading }: { label: string; tile: KeyStatTile | null; deltaLoading?: boolean }): ReactElement {
   if (tile === null) {
     return (
       <div className="key-stats-card__tile">
@@ -47,7 +47,7 @@ function TileItem({ label, tile }: { label: string; tile: KeyStatTile | null }):
         {tile.valueText}
       </dd>
       <span className="key-stats-card__delta numeric" data-tone={tone} data-sign={sign ?? undefined} aria-hidden="true">
-        {delta !== null ? (
+        {deltaLoading ? <span className="feedback-skeleton" aria-hidden="true" /> : delta !== null ? (
           <>
             <span className="key-stats-card__delta-glyph">{delta.glyph}</span>
             {delta.text}
@@ -64,46 +64,32 @@ function TileItem({ label, tile }: { label: string; tile: KeyStatTile | null }):
 export function KeyStatsCard(props: KeyStatsCardProps): ReactElement {
   const { state, distribution, modes, numPlayers } = props;
 
-  const isLoading = state.kind === 'loading' || distribution.kind === 'loading' || modes === null;
-
-  let message: string | null = null;
+  const ext = state.kind === 'ready' ? state.extendedState : null;
+  const message = state.kind === 'error' ? state.message
+    : ext?.kind === 'error' ? ext.issue.message
+    : state.kind === 'empty' ? 'この期間の対局はありません'
+    : ext?.kind === 'empty' ? 'この期間の詳細スタッツはありません' : null;
+  const isLoading = !message && (state.kind === 'loading' || ext?.kind === 'loading' || modes === null);
   let tiles: readonly KeyStatTile[] | null = null;
   let note = '';
-
-  if (!isLoading) {
-    if (state.kind === 'error') {
-      message = state.message;
-    } else if (state.kind === 'ready') {
-      if (state.extended === null) {
-        message = '主要スタッツを取得できません';
-      } else {
-        const mode = selectRepresentativeMode(numPlayers, modes);
-        const meanOf =
-          distribution.kind === 'ready'
-            ? (metric: string) => getBandZeroMean(distribution.histogram, mode, metric)
-            : () => null;
-        const view = buildKeyStatsView({ extended: state.extended, meanOf, mode });
-        tiles = view.tiles;
-        note = view.comparable ? view.note : '卓全体平均を取得できませんでした';
-      }
-    } else {
-      // state.kind === 'empty' はここに到達しない（SummaryPanel が上流で扱う）。
-      // 型の網羅性のためだけの防御的分岐で、loading と同じ描画にする。
-      message = null;
-    }
+  if (state.kind === 'ready' && ext?.kind === 'ready' && modes) {
+    const mode = selectRepresentativeMode(numPlayers, modes);
+    const meanOf = distribution.kind === 'ready' ? (metric: string) => getBandZeroMean(distribution.histogram, mode, metric) : () => null;
+    const view = buildKeyStatsView({extended: ext.data, meanOf, mode});
+    tiles = view.tiles;
+    note = distribution.kind === 'loading' ? '' : view.comparable ? view.note : distribution.kind === 'ready' ? 'この卓の平均データがありません' : '卓全体平均を取得できませんでした';
   }
-
-  const cardState: 'loading' | 'ready' | 'error' = isLoading ? 'loading' : message !== null ? 'error' : 'ready';
+  const cardState = message ? (state.kind === 'empty' || ext?.kind === 'empty' ? 'empty' : 'error') : isLoading ? 'loading' : 'ready';
 
   return (
-    <ElevatedCard className="key-stats-card" data-testid="key-stats-card" data-state={cardState}>
+    <ElevatedCard className="key-stats-card" data-testid="key-stats-card" data-state={cardState} aria-busy={isLoading || distribution.kind === 'loading'}>
       <div className="key-stats-card__inner">
         <h2 className="key-stats-card__title md-typescale-title-medium">主要スタッツ</h2>
 
         <div className={`key-stats-card__body${message !== null ? ' key-stats-card__body--message' : ''}`}>
           <dl className="key-stats-card__tiles" data-testid="key-stats-tiles">
             {KEY_STAT_METRICS.map((metric, i) => (
-              <TileItem key={metric.key} label={metric.label} tile={tiles?.[i] ?? null} />
+              <TileItem key={metric.key} label={metric.label} tile={tiles?.[i] ?? null} deltaLoading={distribution.kind === 'loading'} />
             ))}
           </dl>
 

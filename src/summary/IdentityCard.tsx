@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom';
+import { ResourceFeedback } from '../feedback/RequestFeedback';
+import type { RequestIssue } from '../feedback/requestIssue';
 import type { ReactElement } from 'react';
 import type { CurrentIdentityState } from '../filters/useCurrentIdentity';
 import { buildIdentityView, type IdentityView } from './identityView';
@@ -13,6 +16,8 @@ import './summary.css';
  */
 export interface IdentityCardProps {
   readonly state: CurrentIdentityState;
+  readonly onRetry?: () => void;
+  readonly retryingIssue?: RequestIssue | null;
   readonly fallbackName: string; // 例 'プレイヤー: 123456'（identity 未解決時の名前）
 }
 
@@ -94,30 +99,31 @@ export function IdentityCard(props: IdentityCardProps): ReactElement {
     return <ReadyIdentity view={buildIdentityView(state.identity)} />;
   }
 
-  if (state.kind === 'loading') {
+  if (state.kind === 'loading' && !props.retryingIssue) {
     return (
-      <section className="identity" data-testid="identity-card">
+      <section className="identity" data-testid="identity-card" aria-busy="true">
         <Head name={fallbackName} />
         <div className="identity__level identity__level--loading" data-testid="identity-level">
-          <span className="identity__skeleton identity__skeleton--level" />
+          <span aria-hidden="true" className="identity__skeleton identity__skeleton--level" />
         </div>
         <div className="identity__progress" aria-hidden="true" />
         <p className="identity__remaining md-typescale-body-medium" data-testid="identity-remaining">
-          <span className="identity__skeleton identity__skeleton--remaining" />
+          <span aria-hidden="true" className="identity__skeleton identity__skeleton--remaining" />
         </p>
       </section>
     );
   }
 
-  const message = state.kind === 'notFound' ? 'プレイヤーが見つかりませんでした' : state.message;
+  const message = state.kind === 'notFound' ? 'プレイヤーが見つかりませんでした' : state.kind === 'error' ? state.message : props.retryingIssue?.message ?? '';
   const messageModifierClass = state.kind === 'notFound' ? 'identity__message--not-found' : 'identity__message--error';
 
   return (
     <section className="identity" data-testid="identity-card">
       <Head name={fallbackName} />
-      <p className={`identity__message md-typescale-body-medium ${messageModifierClass}`} data-testid="identity-level">
-        {message}
-      </p>
+      <div className={`identity__message md-typescale-body-medium ${messageModifierClass}`} data-testid="identity-level">
+        {state.kind === 'notFound' ? <><p className="md-typescale-body-medium">{message}</p><Link to="/">検索へ戻る</Link></> :
+          <ResourceFeedback source="現在の段位" announce={false} compact issue={state.kind === 'error' ? state.issue : null} retryingIssue={props.retryingIssue} onRetry={props.onRetry} />}
+      </div>
     </section>
   );
 }

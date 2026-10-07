@@ -49,7 +49,7 @@ const READY_WITH_CONDITIONS_STATE: CurrentIdentityState = {
 const ENTRIES: readonly GalleryEntry[] = [
   { label: '1. loading', state: LOADING_STATE },
   { label: '2. notFound', state: { kind: 'notFound' } },
-  { label: '3. error', state: { kind: 'error', message: 'ネットワークに接続できませんでした。' } },
+  { label: '3. error', state: { issue: {kind: 'unknown', message: 'ネットワークに接続できませんでした。'}, kind: 'error', message: 'ネットワークに接続できませんでした。' } },
   {
     label: '4. 雀傑2 四麻（条件なし・常態）',
     state: { kind: 'ready', identity: makeInfo('テストプレイヤー01', { id: 10302, score: 232, delta: 0 }, 1234) },

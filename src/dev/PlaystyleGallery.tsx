@@ -77,7 +77,7 @@ function makeStats(): PlayerStats {
 }
 
 function ready(extended: PlayerExtendedStats | null): FilteredStatsState {
-  return { kind: 'ready', stats: makeStats(), extended };
+  return { kind: 'ready', stats: makeStats(), extended, extendedState: extended ? {kind: 'ready', data: extended} : {kind: 'empty'} };
 }
 
 function distReady(lookup: MetricLookup): DistributionState {
@@ -85,8 +85,8 @@ function distReady(lookup: MetricLookup): DistributionState {
 }
 
 const LOADING_STATS: FilteredStatsState = { kind: 'loading' };
-const ERROR_STATS: FilteredStatsState = { kind: 'error', message: 'ネットワークに接続できませんでした。' };
-const ERROR_DISTRIBUTION: DistributionState = { kind: 'error', message: '母集団データを取得できませんでした。' };
+const ERROR_STATS: FilteredStatsState = { issue: {kind: 'unknown', message: 'ネットワークに接続できませんでした。'}, kind: 'error', message: 'ネットワークに接続できませんでした。' };
+const ERROR_DISTRIBUTION: DistributionState = { issue: {kind: 'unknown', message: '母集団データを取得できませんでした。'}, kind: 'error', message: '母集団データを取得できませんでした。' };
 const LOADING_DISTRIBUTION: DistributionState = { kind: 'loading' };
 
 const MODES_16: readonly GameMode[] = [16];

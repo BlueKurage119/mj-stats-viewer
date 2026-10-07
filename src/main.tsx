@@ -41,6 +41,14 @@ async function bootstrap() {
         const { CompareGallery } = await import('./dev/CompareGallery');
         return <CompareGallery />;
       },
+      '#/__states': async () => {
+        const { StateGallery } = await import('./dev/StateGallery');
+        const { installFixtureFetch, SCENARIOS } = await import('./dev/fixtureFetch');
+        const requested = new URLSearchParams(location.hash.split('?')[1] ?? '').get('scenario');
+        const scenario = SCENARIOS.find(value => value === requested) ?? 'success';
+        const session = installFixtureFetch(scenario);
+        return <StateGallery session={session} scenario={scenario} />;
+      },
       '#/__stats': async () => {
         const { StatsGallery } = await import('./dev/StatsGallery');
         return <StatsGallery />;

@@ -1,42 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import type { LevelStatistics, NumPlayers } from '../api';
 import { getLevelStatistics } from '../api';
-import { describeStatsError } from './filterErrors';
-
+import { useRetryResource } from '../feedback/useRetryResource';
+import type { RequestIssue, RetryResource } from '../feedback/requestIssue';
 export type LevelStatisticsState =
   | { kind: 'loading' }
   | { kind: 'ready'; stats: LevelStatistics }
-  | { kind: 'error'; message: string };
-
-/**
- * 段位分布（level_statistics）の取得フック。
- * `numPlayers` にのみ依存する（フィルタ非依存）。
- *
- * 設計書: docs/design/issue-13-comparison-tab.md §5.1
- */
-export function useLevelStatistics(numPlayers: NumPlayers): LevelStatisticsState {
-  const [state, setState] = useState<LevelStatisticsState>({ kind: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-    // oxlint-disable-next-line react/set-state-in-effect
-    setState({ kind: 'loading' });
-
-    getLevelStatistics(numPlayers)
-      .then((stats) => {
-        if (cancelled) return;
-        setState({ kind: 'ready', stats });
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setState({ kind: 'error', message: describeStatsError(err) });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [numPlayers]);
-
-  return state;
+  | { kind: 'error'; message: string; issue: RequestIssue };
+export function useLevelStatistics(numPlayers: NumPlayers): RetryResource<LevelStatisticsState> {
+  const load = useCallback(() => getLevelStatistics(numPlayers), [numPlayers]);
+  const resource = useRetryResource(String(numPlayers), load);
+  const state: LevelStatisticsState = resource.state.kind === 'ready'
+    ? { kind: 'ready', stats: resource.state.data }
+    : resource.state.kind === 'empty' ? { kind: 'loading' } : resource.state;
+  return { ...resource, state };
 }
