@@ -1,0 +1,401 @@
+{
+  "baseline": {
+    "commit": "fe485da",
+    "files": 35,
+    "tests": 430
+  },
+  "current": {
+    "files": 39,
+    "tests": 447
+  },
+  "browserPhases": [
+    {
+      "rows": [
+        {
+          "scenario": "success",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        },
+        {
+          "scenario": "error-extended",
+          "tab": "summary",
+          "before": 4,
+          "after": 5,
+          "hero": 126
+        },
+        {
+          "scenario": "empty-extended",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        },
+        {
+          "scenario": "error-basic",
+          "tab": "summary",
+          "before": 4,
+          "after": 5,
+          "hero": 126
+        },
+        {
+          "scenario": "empty-basic",
+          "tab": "compare",
+          "before": 5,
+          "after": 5,
+          "hero": 126
+        },
+        {
+          "scenario": "error-distribution",
+          "tab": "summary",
+          "before": 4,
+          "after": 5,
+          "hero": 126
+        },
+        {
+          "scenario": "error-level",
+          "tab": "compare",
+          "before": 8,
+          "after": 9,
+          "hero": 126
+        },
+        {
+          "scenario": "empty-level",
+          "tab": "compare",
+          "before": 8,
+          "after": 8,
+          "hero": 126
+        },
+        {
+          "scenario": "error-representative",
+          "tab": "compare",
+          "before": 7,
+          "after": 9,
+          "hero": 126
+        },
+        {
+          "scenario": "error-mode-basic",
+          "tab": "compare",
+          "before": 7,
+          "after": 8,
+          "hero": 126
+        },
+        {
+          "scenario": "error-mode-extended",
+          "tab": "compare",
+          "before": 7,
+          "after": 8,
+          "hero": 126
+        },
+        {
+          "scenario": "empty-candidates",
+          "tab": "compare",
+          "before": 7,
+          "after": 7,
+          "hero": 126
+        },
+        {
+          "scenario": "maintenance",
+          "tab": "summary",
+          "before": 4,
+          "after": 8,
+          "hero": 126
+        },
+        {
+          "scenario": "all-mirrors",
+          "tab": "summary",
+          "before": 12,
+          "after": 12,
+          "hero": 126
+        },
+        {
+          "scenario": "slow-extended",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        },
+        {
+          "scenario": "slow-distribution",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        },
+        {
+          "scenario": "slow-basic",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        },
+        {
+          "scenario": "slow-level",
+          "tab": "compare",
+          "before": 8,
+          "after": 8,
+          "hero": 126
+        },
+        {
+          "scenario": "error-extended",
+          "tab": "stats",
+          "before": 4,
+          "after": 5,
+          "hero": 126
+        },
+        {
+          "scenario": "zero-breakdown",
+          "tab": "summary",
+          "before": 4,
+          "after": 4,
+          "hero": 126
+        }
+      ],
+      "errors": [],
+      "blockedExternalHosts": [
+        "fonts.googleapis.com"
+      ]
+    },
+    {
+      "results": [
+        {
+          "width": 375,
+          "scenario": "success",
+          "hero": 126
+        },
+        {
+          "width": 375,
+          "scenario": "slow-identity",
+          "hero": 126
+        },
+        {
+          "width": 375,
+          "scenario": "error-identity",
+          "hero": 126
+        },
+        {
+          "width": 375,
+          "scenario": "maintenance",
+          "hero": 126
+        },
+        {
+          "width": 375,
+          "scenario": "empty-identity",
+          "hero": 126
+        },
+        {
+          "width": 840,
+          "scenario": "success",
+          "hero": 126
+        },
+        {
+          "width": 840,
+          "scenario": "slow-identity",
+          "hero": 126
+        },
+        {
+          "width": 840,
+          "scenario": "error-identity",
+          "hero": 126
+        },
+        {
+          "width": 840,
+          "scenario": "maintenance",
+          "hero": 126
+        },
+        {
+          "width": 840,
+          "scenario": "empty-identity",
+          "hero": 126
+        },
+        {
+          "width": 1280,
+          "scenario": "success",
+          "hero": 126
+        },
+        {
+          "width": 1280,
+          "scenario": "slow-identity",
+          "hero": 126
+        },
+        {
+          "width": 1280,
+          "scenario": "error-identity",
+          "hero": 126
+        },
+        {
+          "width": 1280,
+          "scenario": "maintenance",
+          "hero": 126
+        },
+        {
+          "width": 1280,
+          "scenario": "empty-identity",
+          "hero": 126
+        },
+        {
+          "scenario": "race",
+          "oldResponseIgnored": true
+        },
+        {
+          "scenario": "race-error",
+          "oldResponseIgnored": true
+        },
+        {
+          "keyboard": "Enter",
+          "focused": {
+            "tag": "H2",
+            "text": "主要スタッツ"
+          }
+        },
+        {
+          "keyboard": "Space",
+          "focusNotStolen": true
+        },
+        {
+          "dark": false,
+          "contrast": 13.25965913654373,
+          "colors": {
+            "color": "rgb(65, 0, 2)",
+            "bg": "rgb(255, 218, 214)"
+          }
+        },
+        {
+          "dark": true,
+          "contrast": 5.509400307174943,
+          "colors": {
+            "color": "rgb(255, 180, 171)",
+            "bg": "rgb(147, 0, 10)"
+          }
+        },
+        {
+          "reducedMotion": "none"
+        },
+        {
+          "statsSections": 9,
+          "distributionTables": 3
+        }
+      ],
+      "errors": []
+    },
+    {
+      "results": [
+        {
+          "emptyOverridesDetailsError": true
+        },
+        {
+          "bothErrorsRetryRequests": 2
+        },
+        {
+          "identityPendingGrowthRows": 5
+        },
+        {
+          "identityNotFound": true
+        },
+        {
+          "search": "empty-search"
+        },
+        {
+          "search": "error-search"
+        },
+        {
+          "search": "maintenance"
+        },
+        {
+          "rank": "default",
+          "dark": false,
+          "contrast": 13.25965913654373
+        },
+        {
+          "rank": "default",
+          "dark": true,
+          "contrast": 5.509400307174943
+        },
+        {
+          "rank": "ketsu",
+          "dark": false,
+          "contrast": 13.25965913654373
+        },
+        {
+          "rank": "ketsu",
+          "dark": true,
+          "contrast": 5.509400307174943
+        },
+        {
+          "rank": "gou",
+          "dark": false,
+          "contrast": 13.25965913654373
+        },
+        {
+          "rank": "gou",
+          "dark": true,
+          "contrast": 5.509400307174943
+        },
+        {
+          "rank": "sei",
+          "dark": false,
+          "contrast": 13.25965913654373
+        },
+        {
+          "rank": "sei",
+          "dark": true,
+          "contrast": 5.509400307174943
+        },
+        {
+          "rank": "konten",
+          "dark": false,
+          "contrast": 13.25965913654373
+        },
+        {
+          "rank": "konten",
+          "dark": true,
+          "contrast": 5.509400307174943
+        },
+        {
+          "healthyHistograms": 14
+        }
+      ],
+      "errors": []
+    },
+    {
+      "liveRegionOutsideBusy": true,
+      "skeletonHidden": true,
+      "tooltipsExclusive": true,
+      "sharedIdentityRequest": 1,
+      "playerCountRaceIgnored": true,
+      "finiteValueScenarios": [
+        "zero-rounds",
+        "zero-breakdown",
+        "empty-distribution"
+      ]
+    }
+  ],
+  "mutations": [
+    {
+      "mutation": "control-comment",
+      "exit": 0,
+      "result": "SURVIVED"
+    },
+    {
+      "mutation": "maintenance-kind",
+      "exit": 1,
+      "result": "KILLED"
+    },
+    {
+      "mutation": "loading-before-error",
+      "exit": 1,
+      "result": "KILLED"
+    },
+    {
+      "mutation": "refetch-successful",
+      "exit": 1,
+      "result": "KILLED"
+    },
+    {
+      "mutation": "accept-obsolete",
+      "exit": 1,
+      "result": "KILLED"
+    }
+  ]
+}

@@ -39,7 +39,7 @@
 | ヒーローは固定4行。error 領域に `min-height: 94px` がある | `IdentityCard.tsx`・`summary.css`、#8 設計 | ボタンを含む文言を収める。ヒーローへ可変長の通知を積み増さない |
 | MD TextButton ラッパー、focus/blur/softDisabled がある | `components/md/Button.ts`、`node_modules/@material/web/button/internal/button.d.ts` | 既存ラッパーを使う。フォーカス挙動は検証時に実測 |
 
-事前確認の baseline は 51ファイル・601テスト成功、型チェック・ビルド成功、lint はエラー0・既存警告5件。ビルド JS gzip は 152.75 kB（サイズ警告あり）。#14 の過去のバンドル上限を本 Issue の baseline として流用しない。
+事前確認の baseline は 35ファイル・430テスト成功（基準コミットのアーカイブから再集計。初回報告の51ファイル・601件を訂正）、型チェック・ビルド成功、lint はエラー0・既存警告5件。ビルド JS gzip は 152.75 kB（サイズ警告あり）。#14 の過去のバンドル上限を本 Issue の baseline として流用しない。
 
 ## 3. 状態モデルと公開インターフェース
 
@@ -301,3 +301,7 @@ fixtureFetch は要求履歴（endpoint・mode・range・回数・abort）を表
 本設計では外部amae-koromo APIを呼んでいない。404・maintenanceの形は既存API実装/仕様に依拠する。数値・コントラスト・バンドル増分の新規実測は製造後に行い、未測定値を測定済みとして扱わない。
 
 #16はbaselineの既存lint/サイズ警告とdevルート除外の検証を引き継ぐ。#17は独立した取得状態・通知・retryの規約を再利用し、CAP保護を迂回しない。既存の四麻「ラス率」と「逆連対率」の差、暫定ラベル、fixture内部整合性などは#15で定義を変更しない。
+
+## 10. 製造時の検証記録
+
+実装・測定結果、再現コマンド、画面証跡、未確認範囲は [2026-10-07の検証記録](../ui-verification/2026-10-07-issue-15-states.md) を参照。上記チェックリストは設計時の検収項目であり、全項目の検収完了を意味しない。
