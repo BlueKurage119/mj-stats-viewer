@@ -4,10 +4,12 @@
  * 設計書: docs/design/issue-13-comparison-tab.md §6.3
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useRetryResource } from '../feedback/useRetryResource';
+import type { RequestIssue, RetryResource } from '../feedback/requestIssue';
 import type { GameMode, NumPlayers } from '../api';
 import { getPlayerStats, resolveRange } from '../api';
-import { describeStatsError } from '../filters/filterErrors';
+
 import {
   canonicalizeModes,
   selectRepresentativeMode,
@@ -24,7 +26,7 @@ export type RepresentativeModeState =
       gameCountByMode: Readonly<Partial<Record<GameMode, number>>>;
       auto: boolean;
     }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; issue: RequestIssue };
 
 /**
  * 選択モード ∩ playedModes から候補モードを抽出する。
@@ -74,116 +76,47 @@ export function shouldResetOverride(
   return prevFilter.modes.some((m, i) => m !== nextFilter.modes[i]);
 }
 
-export function useRepresentativeMode(args: {
+export interface RepresentativeModeArgs {
   numPlayers: NumPlayers;
   playerId: number;
   filter: GlobalFilter | null;
   playedModes: readonly GameMode[] | null;
   override: GameMode | null;
-}): RepresentativeModeState {
+}
+type ReadyMode = Extract<RepresentativeModeState, {kind: 'ready'}>;
+const noMode = (data: ReadyMode | null) => data === null;
+export function useRepresentativeMode(args: RepresentativeModeArgs): RetryResource<RepresentativeModeState> {
   const { numPlayers, playerId, filter, playedModes, override } = args;
-
-  const [state, setState] = useState<RepresentativeModeState>({ kind: 'loading' });
-
-  useEffect(() => {
-    if (!filter || !playedModes) {
-      // oxlint-disable-next-line react/set-state-in-effect
-      setState({ kind: 'loading' });
-      return;
-    }
-
-    const candidates = resolveCandidates(filter.modes, playedModes, numPlayers);
-    if (candidates.length === 0) {
-      // oxlint-disable-next-line react/set-state-in-effect
-      setState({ kind: 'empty' });
-      return;
-    }
-
-    // 候補が1つの場合は追加APIリクエスト0本で即座に決定（A4-2）
-    if (candidates.length === 1) {
-      const determined = determineRepresentativeMode(numPlayers, candidates, {}, override);
-      if (determined) {
-        // oxlint-disable-next-line react/set-state-in-effect
-        setState({
-          kind: 'ready',
-          mode: determined.mode,
-          candidates,
-          gameCountByMode: {},
-          auto: determined.auto,
-        });
-      }
-      return;
-    }
-
-    // 候補が2つ以上の場合は各モードの player_stats を並列発行（R-3）
-    let cancelled = false;
-    const controller = new AbortController();
-    // oxlint-disable-next-line react/set-state-in-effect
-    setState({ kind: 'loading' });
-
-    async function fetchCounts() {
-      try {
-        const range = await resolveRange(
-          { kind: 'preset', preset: filter!.period },
-          numPlayers,
-          playerId,
-        );
-        if (cancelled) return;
-
-        const results = await Promise.all(
-          candidates.map((mode) =>
-            getPlayerStats(
-              numPlayers,
-              playerId,
-              range.start,
-              range.end,
-              [mode],
-              controller.signal,
-            ),
-          ),
-        );
-        if (cancelled) return;
-
-        const gameCountByMode: Partial<Record<GameMode, number>> = {};
-        for (let i = 0; i < candidates.length; i++) {
-          const stats = results[i];
-          if (stats) {
-            gameCountByMode[candidates[i]] = stats.gameCount;
-          }
+  const key = filter && playedModes ? `${numPlayers}|${playerId}|${filter.modes.join('.')}|${filter.period}|${playedModes.join('.')}|${override ?? ''}` : null;
+  const source = useMemo(() => {
+    if (!key) return null;
+    const [np, id, modes, period, played, selected] = key.split('|');
+    let range: ReturnType<typeof resolveRange> | null = null;
+    return {
+      np: Number(np) as NumPlayers, id: Number(id), period: period as GlobalFilter['period'],
+      candidates: resolveCandidates(modes.split('.').map(Number) as GameMode[], played.split('.').map(Number) as GameMode[], Number(np) as NumPlayers),
+      override: selected ? Number(selected) as GameMode : null,
+      range: () => {
+        if (!range) {
+          range = resolveRange({kind: 'preset', preset: period as GlobalFilter['period']}, Number(np) as NumPlayers, Number(id));
+          void range.catch(() => { range = null; });
         }
-
-        const determined = determineRepresentativeMode(
-          numPlayers,
-          candidates,
-          gameCountByMode,
-          override,
-        );
-        if (!determined) {
-          setState({ kind: 'empty' });
-          return;
-        }
-
-        setState({
-          kind: 'ready',
-          mode: determined.mode,
-          candidates,
-          gameCountByMode,
-          auto: determined.auto,
-        });
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setState({ kind: 'error', message: describeStatsError(err) });
-        }
-      }
-    }
-
-    void fetchCounts();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
+        return range;
+      },
     };
-  }, [numPlayers, playerId, filter, playedModes, override]);
-
-  return state;
+  }, [key]);
+  const load = useCallback(async (): Promise<ReadyMode | null> => {
+    if (!source || source.candidates.length === 0) return null;
+    const counts: Partial<Record<GameMode, number>> = {};
+    if (source.candidates.length > 1) {
+      const range = await source.range();
+      const results = await Promise.all(source.candidates.map(mode => getPlayerStats(source.np, source.id, range.start, range.end, [mode])));
+      results.forEach((stats, i) => { counts[source.candidates[i]] = stats?.gameCount ?? 0; });
+      if (results.every(stats => !stats || stats.gameCount === 0)) return null;
+    }
+    const result = determineRepresentativeMode(source.np, source.candidates, counts, source.override);
+    return result ? {kind: 'ready', ...result, candidates: source.candidates, gameCountByMode: counts} : null;
+  }, [source]);
+  const resource = useRetryResource(key, load, noMode);
+  return { ...resource, state: resource.state.kind === 'ready' ? resource.state.data! : resource.state };
 }

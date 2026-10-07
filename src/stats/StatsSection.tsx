@@ -3,6 +3,7 @@ import { ElevatedCard, Icon, List, ListItem } from '../components/md';
 import type { StatSectionView } from './statsView';
 
 export interface StatsSectionProps {
+  readonly loadingRows?: ReadonlySet<string>;
   readonly section: StatSectionView;
   readonly openTipId?: string | null;
   readonly onToggleTip?: (tipId: string | null) => void;
@@ -16,6 +17,7 @@ const DIST_GROUPS = [
 
 export function StatsSection({
   section,
+  loadingRows,
   openTipId: externalOpenTipId,
   onToggleTip: externalOnToggleTip,
 }: StatsSectionProps): ReactElement {
@@ -41,7 +43,7 @@ export function StatsSection({
   }, [isControlled, currentOpenTipId, setOpenTip]);
 
   return (
-    <ElevatedCard className="stats-section-card" data-section={section.id}>
+    <ElevatedCard className="stats-section-card" data-section={section.id} aria-busy={!!loadingRows?.size}>
       <section className="stats-section">
         <h2 className="stats-section__title md-typescale-title-small">{section.title}</h2>
         {section.note && (
@@ -64,13 +66,13 @@ export function StatsSection({
                   <tr key={r.key} data-row={r.key} className="stats-table__row">
                     <td className="stats-table__cell stats-table__cell--label">{r.label}</td>
                     <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
-                      {r.countText}
+                      {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.countText}
                     </td>
                     <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
-                      {r.percentText}
+                      {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.percentText}
                     </td>
                     <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
-                      {r.avgScoreText}
+                      {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.avgScoreText}
                     </td>
                   </tr>
                 ))}
@@ -100,10 +102,10 @@ export function StatsSection({
                           <tr key={r.key} data-row={r.key} className="stats-table__row">
                             <td className="stats-table__cell stats-table__cell--label">{r.label}</td>
                             <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
-                              {r.countText}
+                              {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.countText}
                             </td>
                             <td className="stats-table__cell stats-table__cell--num stats-table__cell--value md-typescale-title-medium numeric">
-                              {r.percentText}
+                              {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.percentText}
                             </td>
                           </tr>
                         ))}
@@ -160,7 +162,7 @@ export function StatsSection({
                       slot="trailing-supporting-text"
                       className="stats-row__value md-typescale-title-medium numeric"
                     >
-                      {r.valueText}
+                      {loadingRows?.has(r.key) ? <span className="feedback-skeleton" aria-hidden="true" /> : r.valueText}
                     </span>
                   </ListItem>
                   {hasNote && (

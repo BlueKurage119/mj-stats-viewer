@@ -1,3 +1,5 @@
+import { ResourceFeedback } from '../feedback/RequestFeedback';
+import { StatsFeedback } from '../feedback/StatsFeedback';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import type { GameMode } from '../api';
 import { getBandZeroHistogram, getBandZeroMean } from '../domain/distribution';
@@ -42,13 +44,15 @@ export function ComparePanel(): ReactElement {
 
   // 代表モードの選定
   const playedModes = scope.stats.kind === 'ready' ? scope.stats.stats.played_modes : null;
-  const rep = useRepresentativeMode({
+  const repResource = useRepresentativeMode({
     numPlayers,
     playerId,
     filter,
     playedModes,
     override: overrideMode,
   });
+
+  const rep = repResource.state;
 
   // 代表モード1つだけの filter を合成して useFilteredStats をもう一度呼ぶ（§6.4）
   // ★ useMemo 必須: 毎レンダで新しい object literal を渡すと無限ループになる
@@ -58,10 +62,12 @@ export function ComparePanel(): ReactElement {
     () => (repMode !== null && filterPeriod ? { modes: [repMode], period: filterPeriod } : null),
     [repMode, filterPeriod],
   );
-  const modeStats = useFilteredStats(numPlayers, playerId, singleModeFilter);
+  const modeResource = useFilteredStats(numPlayers, playerId, singleModeFilter);
+  const modeStats = modeResource.state;
 
   // 段位分布データの取得
-  const levelStats = useLevelStatistics(numPlayers);
+  const levelResource = useLevelStatistics(numPlayers);
+  const levelStats = levelResource.state;
 
   // 段位分布ビューモデルの構築
   const selfLevelId = identity.kind === 'ready' ? identity.identity.level.id : null;
@@ -80,35 +86,21 @@ export function ComparePanel(): ReactElement {
     return populationSize(distribution.histogram, repMode);
   }, [distribution, repMode]);
 
-  // 全体エラー
-  if (scope.stats.kind === 'error') {
-    return (
-      <div className="compare-panel">
-        <p className="md-typescale-body-medium">{scope.stats.message}</p>
-      </div>
-    );
-  }
-
-  // 候補0または対局なし (empty)
-  if (rep.kind === 'empty' || modeStats.kind === 'empty') {
-    return (
-      <div className="compare-panel">
-        <p className="md-typescale-body-medium">{NO_GAMES_IN_PERIOD_MESSAGE}</p>
-      </div>
-    );
-  }
-
-  const isLoading =
-    filter === null ||
-    distribution.kind === 'loading' ||
-    rep.kind === 'loading' ||
-    modeStats.kind === 'loading';
+  const parentBlocked = scope.stats.kind === 'empty' || scope.stats.kind === 'error';
+  const repBlocked = rep.kind === 'empty' || rep.kind === 'error';
+  const showMetrics = !parentBlocked && !repBlocked && modeStats.kind !== 'empty';
+  const valueLoading = !parentBlocked && !repBlocked && (rep.kind === 'loading' || modeStats.kind === 'loading' || (modeStats.kind === 'ready' && modeStats.extendedState.kind === 'loading'));
+  const distributionLoading = distribution.kind === 'loading' || (!parentBlocked && !repBlocked && rep.kind === 'loading');
 
   // カテゴリ順にグループ化
   const categories: CompareCategory[] = ['rate', 'point', 'speed', 'luck'];
 
   return (
     <div className="compare-panel">
+      <ResourceFeedback source="期間内の成績" issue={scope.stats.kind === 'error' ? scope.stats.issue : null} retryingIssue={scope.statsRetryingIssues.stats} onRetry={() => scope.retryStats('failed')} loading={scope.stats.kind === 'loading'} emptyMessage={scope.stats.kind === 'empty' ? NO_GAMES_IN_PERIOD_MESSAGE : null} />
+      {!parentBlocked && <ResourceFeedback source="比較するモード" issue={rep.kind === 'error' ? rep.issue : null} retryingIssue={repResource.retryingIssue} onRetry={repResource.retry} loading={rep.kind === 'loading'} emptyMessage={rep.kind === 'empty' ? NO_GAMES_IN_PERIOD_MESSAGE : null} />}
+      {!parentBlocked && rep.kind === 'ready' && <StatsFeedback state={modeStats} retryingIssues={modeResource.retryingIssues} onRetry={modeResource.retry} source="比較する成績" />}
+      {!parentBlocked && !repBlocked && <ResourceFeedback source="卓全体の分布" issue={distribution.kind === 'error' ? distribution.issue : null} retryingIssue={scope.distributionRetryingIssue} onRetry={scope.retryDistribution} loading={distribution.kind === 'loading'} />}
       {/* 1. sticky コンテキストバー */}
       <CompareContextBar
         candidates={rep.kind === 'ready' ? rep.candidates : []}
@@ -120,14 +112,18 @@ export function ComparePanel(): ReactElement {
         }}
       />
 
-      {/* 2. 段位分布カード */}
+      {/* 2. 段位分布カード。通知は busy なカードの外に置く。 */}
+      <span role="status" aria-live="polite" className="feedback-status">段位分布: {levelStats.kind === 'error' ? levelStats.issue.message : levelStats.kind === 'loading' ? levelResource.retryingIssue ? '再試行中' : '読み込み中' : !levelDistView || levelDistView.total <= 0 ? '段位分布データがありません' : '読み込み完了'}</span>
       <LevelDistributionCard
         view={levelDistView}
         loading={levelStats.kind === 'loading'}
+        issue={levelStats.kind === 'error' ? levelStats.issue : undefined}
+        retryingIssue={levelResource.retryingIssue}
+        onRetry={levelResource.retry}
       />
 
       {/* 3. 各カテゴリのヒストグラムカード群 */}
-      {categories.map((cat) => {
+      {showMetrics && categories.map((cat) => {
         const metricsInCat = COMPARE_METRICS.filter((m) => m.category === cat);
         return (
           <section key={cat} className="compare-category-section">
@@ -171,7 +167,8 @@ export function ComparePanel(): ReactElement {
                     histogram={histData}
                     tableMean={tableMean}
                     levelMean={levelMean}
-                    loading={isLoading}
+                    valueLoading={valueLoading}
+                    distributionLoading={distributionLoading}
                   />
                 );
               })}

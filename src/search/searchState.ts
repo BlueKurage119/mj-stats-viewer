@@ -1,3 +1,4 @@
+import type { RequestIssue } from '../feedback/requestIssue';
 import type { PlayerSearchResult } from '../api';
 import { ApiError, MaintenanceError } from '../api';
 
@@ -5,7 +6,7 @@ export type SearchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'results'; items: readonly PlayerSearchResult[] }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; issue: RequestIssue };
 
 /** 前後の空白を落とす。全て空白なら '' */
 export function normalizeQuery(raw: string): string {

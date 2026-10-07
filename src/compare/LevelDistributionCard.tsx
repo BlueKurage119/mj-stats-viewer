@@ -1,9 +1,14 @@
+import { ResourceFeedback } from '../feedback/RequestFeedback';
+import type { RequestIssue } from '../feedback/requestIssue';
 import type { ReactElement } from 'react';
 import type { LevelDistributionBar, LevelDistributionView } from './levelDistributionView';
 import { parseLevelId, getLevelMajorTag } from '../domain/level';
 
 export interface LevelDistributionCardProps {
   readonly view: LevelDistributionView | null;
+  readonly issue?: RequestIssue;
+  readonly retryingIssue?: RequestIssue | null;
+  readonly onRetry?: () => void;
   readonly loading?: boolean;
 }
 
@@ -30,9 +35,14 @@ function computeLabelVisibility(bars: readonly LevelDistributionBar[]): boolean[
 export function LevelDistributionCard(props: LevelDistributionCardProps): ReactElement {
   const { view, loading = false } = props;
 
+  const empty = !view || view.total <= 0 || view.bars.length === 0;
+  if (props.issue || props.retryingIssue || (!loading && empty)) return <div className="level-dist-card" data-testid="level-distribution-card" data-state={props.issue || props.retryingIssue ? 'error' : 'empty'}>
+    <h3 className="level-dist-card__title md-typescale-title-medium">段位分布</h3>
+    <ResourceFeedback announce={false} source="段位分布" issue={props.issue} retryingIssue={props.retryingIssue} onRetry={props.onRetry} emptyMessage={!props.issue && !props.retryingIssue ? '段位分布データがありません' : null} />
+  </div>;
   if (loading || !view) {
     return (
-      <div className="level-dist-card" data-testid="level-distribution-card" data-state="loading">
+      <div className="level-dist-card" data-testid="level-distribution-card" data-state="loading" aria-busy="true">
         <div className="level-dist-card__header">
           <h3 className="level-dist-card__title md-typescale-title-medium">段位分布</h3>
         </div>

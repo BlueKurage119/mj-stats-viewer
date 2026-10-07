@@ -79,10 +79,13 @@ function PlayerLayoutInner({
   activeTab: PlayerTab;
   direction: -1 | 0 | 1;
 }): ReactElement {
-  const identity = useCurrentIdentity(numPlayers, playerId);
+  const identityResource = useCurrentIdentity(numPlayers, playerId);
+  const identity = identityResource.state;
   const { filter, setModes, setPeriod } = useGlobalFilter(numPlayers, identity);
-  const stats = useFilteredStats(numPlayers, playerId, filter);
-  const distribution = useGlobalHistogram(numPlayers);
+  const statsResource = useFilteredStats(numPlayers, playerId, filter);
+  const stats = statsResource.state;
+  const distributionResource = useGlobalHistogram(numPlayers);
+  const distribution = distributionResource.state;
 
   // 段位シード切替に渡す levelId は正規化後の値（issue-8 §1.4・§3.4）。
   // 表示中の段位タグ（IdentityCard）とテーマ色が食い違わないようにする。
@@ -98,11 +101,18 @@ function PlayerLayoutInner({
     distribution,
     setModes,
     setPeriod,
+    retryIdentity: identityResource.retry,
+    retryStats: statsResource.retry,
+    retryDistribution: distributionResource.retry,
+    identityRetryingIssue: identityResource.retryingIssue,
+    statsRetryingIssues: statsResource.retryingIssues,
+    distributionRetryingIssue: distributionResource.retryingIssue,
   };
 
   const heroContent = (
     <div className="player-hero">
-      <IdentityCard state={identity} fallbackName={`プレイヤー: ${rawId}`} />
+      <span role="status" aria-live="polite" className="feedback-status">現在の段位: {identity.kind === 'loading' ? identityResource.retryingIssue ? '再試行中' : '読み込み中' : identity.kind === 'error' ? identity.issue.message : identity.kind === 'notFound' ? 'プレイヤーが見つかりませんでした' : '読み込み完了'}</span>
+      <IdentityCard state={identity} onRetry={identityResource.retry} retryingIssue={identityResource.retryingIssue} fallbackName={`プレイヤー: ${rawId}`} />
       <FilterBar
         numPlayers={numPlayers}
         filter={filter}

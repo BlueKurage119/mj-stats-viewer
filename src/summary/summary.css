@@ -1082,3 +1082,10 @@
     max-width: 160px;
   }
 }
+
+/* Missing data is an empty state, not an acquisition failure. */
+.playstyle-card[data-state="empty"] .playstyle-card__message,
+.key-stats-card[data-state="empty"] .key-stats-card__message,
+.win-lose-card[data-state="empty"] .win-lose-card__message {
+  color: var(--md-sys-color-on-surface-variant);
+}
