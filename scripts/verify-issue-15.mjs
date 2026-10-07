@@ -122,6 +122,12 @@ const browser=await chromium.launch({headless:true});const page=await browser.ne
 await page.route('**/*',r=>new URL(r.request().url()).origin===new URL(base).origin?r.continue():r.abort());
 const go=async(scenario,tab='summary')=>{await page.goto(`${base}/?accessibility=${scenario}-${tab}#/__states?scenario=${scenario}&tab=${tab}`);await page.waitForTimeout(600);};
 for(const scenario of ['zero-rounds','zero-breakdown','empty-distribution']) {await go(scenario);assert.doesNotMatch(await page.locator('.summary-panel').innerText(),/NaN|Infinity/);if(scenario==='empty-distribution')assert.equal(await page.locator('[data-testid="playstyle-card"]').getAttribute('data-state'),'empty');}
+for(const scenario of ['empty-extended','empty-distribution']) {
+ await go(scenario);
+ const messages=page.locator('[data-state="empty"] .playstyle-card__message, [data-state="empty"] .key-stats-card__message, [data-state="empty"] .win-lose-card__message');
+ assert.equal(await messages.count(),scenario==='empty-extended'?3:1);
+ assert.equal(await messages.evaluateAll(nodes=>nodes.every(node=>{const probe=document.createElement('span');probe.style.color='var(--md-sys-color-on-surface-variant)';node.append(probe);const matches=getComputedStyle(node).color===getComputedStyle(probe).color;probe.remove();return matches;})),true);
+}
 await go('slow-extended');
 assert.equal(await page.locator('[data-source="詳細スタッツ"] [role="status"]').count(),1);
 assert.equal(await page.locator('[role="status"]').evaluateAll(nodes=>nodes.every(node=>!node.closest('[aria-busy="true"]'))),true);
